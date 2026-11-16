@@ -4,11 +4,10 @@ export const EXPENSE_CATEGORIES = [
   'Impostos', 'Pets', 'Presentes', 'Outros',
 ];
 
-export const INCOME_CATEGORIES = ['Salário', 'Corridas (apps)', 'Freelance', 'Vendas', 'Investimentos', 'Reembolso', 'Outros'];
+export const INCOME_CATEGORIES = ['Salário', 'Corridas (apps)', 'Entregas', 'Freelance', 'Vendas', 'Investimentos', 'Reembolso', 'Outros'];
 
 export const PAYMENT_METHODS = ['Pix', 'Débito', 'Crédito', 'Dinheiro', 'Boleto', 'Transferência'];
 
-export const DRIVER_APPS = ['Uber', '99', 'InDrive', 'Particular', 'Outro'] as const;
 
 export const VEHICLE_EXPENSE_CATEGORIES = [
   'Combustível', 'Troca de óleo', 'Manutenção', 'Pneus', 'IPVA', 'Licenciamento', 'Seguro',

@@ -12,7 +12,7 @@ const byCreatedAsc = (a: any, b: any) => (a.createdAt ?? '').localeCompare(b.cre
 const SORT: Record<CollectionKey, (a: any, b: any) => number> = {
   transactions: byDateDesc, sessions: byDateDesc, vehicleExpenses: byDateDesc,
   goals: byCreatedDesc, shopping: byCreatedDesc, fixedPayments: byCreatedDesc,
-  fixed: byCreatedAsc, vehicles: byCreatedAsc,
+  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc,
 };
 
 interface DataApi {
@@ -23,6 +23,8 @@ interface DataApi {
   insert: <K extends CollectionKey>(k: K, items: Partial<Collections[K]> | Partial<Collections[K]>[]) => Promise<Collections[K][] | null>;
   update: <K extends CollectionKey>(k: K, id: string, patch: Partial<Collections[K]>) => Promise<boolean>;
   remove: <K extends CollectionKey>(k: K, id: string) => Promise<boolean>;
+  /** Grava um registro com id fixo (cria ou substitui). */
+  put: <K extends CollectionKey>(k: K, item: Collections[K]) => Promise<boolean>;
   replaceAll: (data: Partial<Record<CollectionKey, any[]>>) => Promise<boolean>;
 }
 
@@ -92,13 +94,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return commit(ops);
   }, [commit, data]);
 
+  const put: DataApi['put'] = useCallback(async (k, item) => {
+    const now = new Date().toISOString();
+    const cur = (data[k] as any[]).find((x) => x.id === (item as any).id);
+    return commit({ put: { [k]: [{ ...item, createdAt: cur?.createdAt ?? now, updatedAt: now }] } });
+  }, [commit, data]);
+
   const replaceAll: DataApi['replaceAll'] = useCallback(async (incoming) => {
     const now = new Date().toISOString();
     const put = Object.fromEntries(Object.entries(incoming).map(([c, items]) => [c, (items ?? []).map((x) => ({ createdAt: now, updatedAt: now, ...x }))]));
     return commit({ clear: [...COLLECTIONS], put });
   }, [commit]);
 
-  const api = useMemo(() => ({ data, loading, persisted, engine, insert, update, remove, replaceAll }), [data, loading, persisted, engine, insert, update, remove, replaceAll]);
+  const api = useMemo(() => ({ data, loading, persisted, engine, insert, update, remove, put, replaceAll }), [data, loading, persisted, engine, insert, update, remove, put, replaceAll]);
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }
 

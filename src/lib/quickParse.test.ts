@@ -13,6 +13,10 @@ describe('parseQuickEntry', () => {
   it('corridas', () => {
     expect(parseQuickEntry('ganhei 230 na uber', T)).toMatchObject({ type: 'income', amount: 230, category: 'Corridas (apps)' });
   });
+  it('entregas', () => {
+    expect(parseQuickEntry('ganhei 180 no ifood', T)).toMatchObject({ type: 'income', category: 'Entregas' });
+    expect(parseQuickEntry('recebi 250 mercado livre', T)).toMatchObject({ type: 'income', category: 'Entregas' });
+  });
   it('combustível ontem no crédito', () => {
     expect(parseQuickEntry('abasteci 150 ontem no crédito', T)).toMatchObject({ type: 'expense', category: 'Combustível', paymentMethod: 'Crédito', date: '2026-11-12' });
   });

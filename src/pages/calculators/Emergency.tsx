@@ -22,7 +22,7 @@ export default function Emergency() {
   return (
     <CalcLayout
       inputs={<>
-        <Field label="Seu perfil"><Segmented value={profile} onChange={setProfile} options={Object.entries(PROFILES).map(([value, p]) => ({ value: value as keyof typeof PROFILES, label: p.label }))} /></Field>
+        <Field label="Seu perfil" group><Segmented value={profile} onChange={setProfile} options={Object.entries(PROFILES).map(([value, p]) => ({ value: value as keyof typeof PROFILES, label: p.label }))} /></Field>
         <Field label="Custo de vida mensal" hint={fixedExp > 0 ? `Suas contas fixas somam ${formatBRL(fixedExp)}` : undefined}><MoneyInput value={cost} onChange={setCost} /></Field>
         <Field label="Quanto já tem guardado"><MoneyInput value={saved} onChange={setSaved} /></Field>
         <Field label="Quanto consegue guardar por mês"><MoneyInput value={monthly} onChange={setMonthly} /></Field>

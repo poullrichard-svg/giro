@@ -30,12 +30,17 @@ export interface FixedPayment {
   paidAt: string;
 }
 
-export type DriverApp = 'Uber' | '99' | 'InDrive' | 'Particular' | 'Outro';
+/** Tipo de serviço: transporte de passageiros, entregas, ou trabalho fixo/diária. */
+export type WorkKind = 'passageiro' | 'entrega' | 'fixo';
+export type VehicleKind = 'carro' | 'moto' | 'bike' | 'van';
 
 export interface DriverSession {
   id: string;
   date: string;
-  app: DriverApp;
+  /** Nome da plataforma (Uber, iFood, Mercado Livre…). */
+  app: string;
+  platformId?: string | null;
+  workKind?: WorkKind | null;
   amount: number;
   trips: number;
   kmDriven: number;
@@ -60,6 +65,7 @@ export interface Vehicle {
   renavam?: string | null;
   fuelType: string;
   ownership: VehicleOwnership;
+  kind?: VehicleKind | null;
   odometer: number;
   fuelConsumption: number; // km/l
   ipvaValue: number;
@@ -105,4 +111,22 @@ export interface ShoppingItem {
   unit: string;
   estimatedPrice: number;
   completed: boolean;
+}
+
+export interface Platform {
+  id: string;
+  name: string;
+  color: string;
+  kind: WorkKind;
+  vehicle?: VehicleKind;
+  enabled: boolean;
+  custom?: boolean;
+}
+
+/** Perfil de trabalho do usuário (fica na coleção "settings", id "work"). */
+export interface WorkProfile {
+  id: string;
+  types: string[];
+  platforms: Platform[];
+  dailyGoal: number;
 }

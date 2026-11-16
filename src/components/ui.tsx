@@ -1,4 +1,5 @@
 import { cloneElement, isValidElement, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type PointerEvent as RPointerEvent, type ReactElement, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { createPortal } from 'react-dom';
 import { Check as CheckIcon, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { formatBRL } from '../lib/format';
 
@@ -88,7 +89,7 @@ export function IconChip({ children, tone = 'brand', size = 'md', solid = true }
 
 export function Card({ children, className, title, action, hover }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode; hover?: boolean }) {
   return (
-    <section className={cx('surface rounded-[1.75rem] p-5 md:rounded-[2rem] md:p-6', hover && 'surface-hover', className)}>
+    <section className={cx('surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2rem] md:p-6', hover && 'surface-hover', className)}>
       {(title || action) && (
         <header className="mb-4 flex items-center justify-between gap-2">
           {title && <h3 className="label flex items-center gap-2 text-slate-400">{title}</h3>}
@@ -115,14 +116,21 @@ export function IconButton({ label, className, ...p }: ButtonHTMLAttributes<HTML
   return <button aria-label={label} title={label} {...p} className={cx('press inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[.04] text-slate-400 ring-1 ring-inset ring-white/5 hover:bg-white/10 hover:text-white', className)} />;
 }
 
-export function Field({ label, children, hint, className }: { label: string; children: ReactNode; hint?: ReactNode; className?: string }) {
-  return (
-    <label className={cx('block space-y-2', className)}>
+/**
+ * Campo com rótulo. Use `group` quando o conteúdo for só botões (opções, chips):
+ * assim tocar no título não "clica" no primeiro botão.
+ */
+export function Field({ label, children, hint, className, group }: { label: string; children: ReactNode; hint?: ReactNode; className?: string; group?: boolean }) {
+  const inner = (
+    <>
       <span className="label block text-slate-500">{label}</span>
       {children}
       {hint && <span className="block text-[11px] text-slate-500">{hint}</span>}
-    </label>
+    </>
   );
+  return group
+    ? <div role="group" aria-label={label} className={cx('block space-y-2', className)}>{inner}</div>
+    : <label className={cx('block space-y-2', className)}>{inner}</label>;
 }
 
 const inputCls = 'w-full min-h-12 rounded-2xl border border-white/[.07] bg-[#08070f] px-4 text-sm font-semibold text-white outline-none transition duration-300 placeholder:font-medium placeholder:text-slate-600 hover:border-white/15 focus:border-brand-400/70 focus:ring-4 focus:ring-brand-500/15';
@@ -210,19 +218,21 @@ export function Modal({ open, onClose, title, children, footer }: { open: boolea
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
   }, [open, onClose]);
   if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm animate-fade md:items-center md:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="surface animate-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2.25rem] md:max-w-lg md:rounded-[2.25rem]">
+  // Portal: abre sempre por cima da tela, sem depender de onde o formulário foi declarado.
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-clip overscroll-contain bg-black/70 backdrop-blur-sm animate-fade md:items-center md:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="surface animate-sheet flex max-h-[92dvh] w-full flex-col overflow-clip rounded-t-[2.25rem] md:max-w-lg md:rounded-[2.25rem]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(80%_100%_at_50%_0%,rgba(34,197,94,.18),transparent)]" />
         <div aria-hidden="true" className="mx-auto mt-2.5 h-1.5 w-12 rounded-full bg-white/15 md:hidden" />
         <header className="relative flex items-center justify-between px-6 pb-3 pt-5">
           <h2 className="font-display text-xl font-black tracking-tight text-white">{title}</h2>
           <IconButton label="Fechar" onClick={onClose} className="rounded-full"><X size={18} /></IconButton>
         </header>
-        <div className="relative flex-1 overflow-y-auto px-6 pb-5">{children}</div>
+        <div className="relative flex-1 overflow-y-auto overscroll-contain px-6 pb-5">{children}</div>
         {footer && <footer className="relative border-t border-white/[.06] px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -272,7 +282,7 @@ export function Row({ icon, tone = 'brand', title, subtitle, amount, amountTone,
   actions?: ReactNode; onClick?: () => void; muted?: boolean; leading?: ReactNode;
 }) {
   return (
-    <li className={cx('group surface surface-hover flex items-center gap-3 rounded-[1.4rem] p-3 pr-3.5 md:gap-4 md:p-3.5', muted && 'opacity-45')}>
+    <li className={cx('group surface surface-hover flex min-w-0 items-center gap-3 rounded-[1.4rem] p-3 pr-3.5 md:gap-4 md:p-3.5', muted && 'opacity-45')}>
       {leading}
       {icon && <IconChip tone={tone} solid={false}>{icon}</IconChip>}
       <button type="button" disabled={!onClick} onClick={onClick} className="min-w-0 flex-1 text-left disabled:cursor-default">

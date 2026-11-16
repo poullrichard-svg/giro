@@ -33,7 +33,7 @@ export default function Financing() {
         <RateField value={s.rate} onChange={(v) => set('rate', v)} period={s.period} onPeriod={(p) => set('period', p)} />
         <TermField value={s.term} onChange={(v) => set('term', v)} unit={s.unit} onUnit={(u) => set('unit', u)} />
         <Field label="Seguros e taxas mensais" hint={kind === 'imovel' ? 'MIP + DFI + tarifa de administração (veja na simulação do banco)' : 'Ex.: seguro prestamista embutido'}><MoneyInput value={s.extras} onChange={(v) => set('extras', v)} /></Field>
-        <Field label="Sistema de amortização"><Segmented value={s.system} onChange={(v) => set('system', v)} options={[{ value: 'price', label: 'Price (parcela fixa)' }, { value: 'sac', label: 'SAC (decrescente)' }]} /></Field>
+        <Field label="Sistema de amortização" group><Segmented value={s.system} onChange={(v) => set('system', v)} options={[{ value: 'price', label: 'Price (parcela fixa)' }, { value: 'sac', label: 'SAC (decrescente)' }]} /></Field>
       </>}
       result={<>
         <div className="grid gap-3 sm:grid-cols-3">

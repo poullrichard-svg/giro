@@ -38,6 +38,7 @@ const CATEGORY_RULES: Array<[string, string[]]> = [
 ];
 
 const INCOME_RULES: Array<[string, string[]]> = [
+  ['Entregas', ['ifood', 'rappi', 'mercado livre', 'shopee', 'amazon', 'loggi', 'lalamove', '99food', 'entrega', 'entregas', 'diaria']],
   ['Corridas (apps)', ['uber', '99', 'indrive', 'corrida', 'corridas', 'app']],
   ['Salário', ['salario', 'pagamento', 'holerite', 'adiantamento', 'vale']],
   ['Freelance', ['freela', 'freelance', 'bico', 'servico']],

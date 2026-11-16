@@ -28,7 +28,7 @@ export default function RatesInflation() {
         </>}
         {mode === 'converter' && <>
           <Field label="Taxa"><NumberInput value={rate} onChange={setRate} suffix="%" /></Field>
-          <Field label="Essa taxa é por"><Segmented value={from} onChange={setFrom} options={[{ value: 'dia', label: 'dia útil' }, { value: 'mes', label: 'mês' }, { value: 'ano', label: 'ano' }]} /></Field>
+          <Field label="Essa taxa é por" group><Segmented value={from} onChange={setFrom} options={[{ value: 'dia', label: 'dia útil' }, { value: 'mes', label: 'mês' }, { value: 'ano', label: 'ano' }]} /></Field>
         </>}
         {mode === 'poder' && <>
           <Field label="Valor"><MoneyInput value={value} onChange={setValue} /></Field>

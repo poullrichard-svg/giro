@@ -3,7 +3,7 @@
  * Cada coleção vira um "object store" com chave `id`.
  * No futuro, um módulo de sincronização (ex.: Supabase) pode ler/gravar daqui.
  */
-import type { DriverSession, FixedBill, FixedPayment, Goal, ShoppingItem, Transaction, Vehicle, VehicleExpense } from '../types';
+import type { DriverSession, FixedBill, FixedPayment, Goal, ShoppingItem, Transaction, Vehicle, VehicleExpense, WorkProfile } from '../types';
 
 export interface Collections {
   transactions: Transaction;
@@ -14,15 +14,16 @@ export interface Collections {
   vehicleExpenses: VehicleExpense;
   goals: Goal;
   shopping: ShoppingItem;
+  settings: WorkProfile;
 }
 export type CollectionKey = keyof Collections;
-export const COLLECTIONS: CollectionKey[] = ['transactions', 'fixed', 'fixedPayments', 'sessions', 'vehicles', 'vehicleExpenses', 'goals', 'shopping'];
+export const COLLECTIONS: CollectionKey[] = ['transactions', 'fixed', 'fixedPayments', 'sessions', 'vehicles', 'vehicleExpenses', 'goals', 'shopping', 'settings'];
 
 /** Todo registro guarda quando foi criado/alterado — útil para ordenar e, no futuro, sincronizar. */
 export type Stored<T> = T & { createdAt: string; updatedAt: string };
 
 const DB_NAME = 'giro';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // v2: coleção "settings" (perfil de trabalho)
 let dbPromise: Promise<IDBDatabase> | null = null;
 
 export function openDB(): Promise<IDBDatabase> {

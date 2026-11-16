@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarClock, CarFront, Droplets, FileText, Fuel, Gauge, Pencil, Plus, Shield, Wrench } from 'lucide-react';
+import { ArrowLeft, Bike, CalendarClock, Car, CarFront, Droplets, FileText, Fuel, Gauge, Motorbike, Pencil, Plus, Shield, Truck, Wrench } from 'lucide-react';
+import { VEHICLE_KINDS } from '../lib/work';
+import type { VehicleKind } from '../types';
+
+const KIND_ICON: Record<VehicleKind, typeof Car> = { carro: Car, moto: Motorbike, bike: Bike, van: Truck };
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
 import { Button, Card, ConfirmDelete, Empty, Field, Input, Modal, MoneyInput, NumberInput, PageHeader, Progress, Segmented, Row, Select, Stat, Tilt, cx } from '../components/ui';
@@ -45,9 +49,9 @@ export default function Vehicles({ id }: { id?: string }) {
                   <div className="min-w-0">
                     <p className="truncate font-display text-lg font-black text-white">{v.name}</p>
                     <p className="truncate text-xs text-slate-500">{[v.brand, v.model, v.year].filter(Boolean).join(' · ') || '—'}</p>
-                    <span className="mt-2 inline-block rounded-md bg-white/5 px-2 py-0.5 text-[11px] text-slate-300">{OWNERSHIP[v.ownership]}</span>
+                    <span className="label mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/[.05] px-2.5 py-1 text-slate-300 ring-1 ring-white/10">{(() => { const K = KIND_ICON[v.kind ?? 'carro']; return <K size={12} />; })()} {VEHICLE_KINDS.find((k) => k.value === (v.kind ?? 'carro'))?.label} · {OWNERSHIP[v.ownership]}</span>
                   </div>
-                  <Plate plate={v.plate} small />
+                  {v.plate ? <Plate plate={v.plate} small /> : null}
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                   <div><p className="text-slate-500">Hodômetro</p><p className="font-semibold text-slate-200">{formatNumber(v.odometer)} km</p></div>
@@ -232,7 +236,7 @@ function ExpenseForm({ open, onClose, vehicle, category, insert, update }: {
     <Modal open={open} onClose={onClose} title={`Gasto · ${vehicle.name}`} footer={<Button className="w-full" onClick={save}>Salvar</Button>}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Tipo"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={VEHICLE_EXPENSE_CATEGORIES} /></Field>
+          <Field label="Tipo" group><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={VEHICLE_EXPENSE_CATEGORIES} /></Field>
           <Field label="Data"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
         </div>
         <Field label="Valor"><MoneyInput value={f.amount} onChange={(v) => setF({ ...f, amount: v })} className="text-lg font-semibold" autoFocus /></Field>
@@ -251,7 +255,7 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
   const { insert, update } = useData();
   const toast = useToast();
   const blank = (): Omit<Vehicle, 'id'> => ({
-    name: '', brand: '', model: '', year: new Date().getFullYear(), plate: '', color: '', renavam: '', fuelType: 'Flex', ownership: 'owned',
+    name: '', kind: 'carro', brand: '', model: '', year: new Date().getFullYear(), plate: '', color: '', renavam: '', fuelType: 'Flex', ownership: 'owned',
     odometer: 0, fuelConsumption: 10, ipvaValue: 0, ipvaDueDate: null, licensingValue: 0, licensingDueDate: null, insuranceValue: 0, insuranceDueDate: null,
     installmentValue: 0, installmentsRemaining: null, oilIntervalKm: 10000, lastOilChangeKm: null, notes: '', active: true,
   });
@@ -273,7 +277,8 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
       <Segmented className="mb-4" value={tab} onChange={setTab} options={[{ value: 'dados', label: 'Dados' }, { value: 'custos', label: 'Custos' }, { value: 'manut', label: 'Manutenção' }]} />
       {tab === 'dados' && (
         <div className="space-y-4">
-          <Field label="Apelido"><Input value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex.: Onix prata" autoFocus /></Field>
+          <Field label="Tipo" group><Segmented value={f.kind ?? 'carro'} onChange={(k) => setF((x) => ({ ...x, kind: k, fuelConsumption: k === 'moto' && x.fuelConsumption === 10 ? 35 : k === 'bike' ? 0 : x.fuelConsumption, oilIntervalKm: k === 'moto' && x.oilIntervalKm === 10000 ? 3000 : x.oilIntervalKm }))} options={VEHICLE_KINDS.map((k) => ({ value: k.value, label: k.value === 'van' ? 'Van' : k.label }))} /></Field>
+          <Field label="Apelido"><Input value={f.name} onChange={(e) => set('name', e.target.value)} placeholder={f.kind === 'moto' ? 'Ex.: CG 160 vermelha' : f.kind === 'bike' ? 'Ex.: Bike elétrica' : 'Ex.: Onix prata'} autoFocus /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Placa"><Input value={f.plate} onChange={(e) => set('plate', e.target.value.toUpperCase())} placeholder="ABC1D23" maxLength={8} className="font-mono uppercase" /></Field>
             <Field label="Ano"><Input type="number" inputMode="numeric" value={f.year ?? ''} onChange={(e) => set('year', e.target.value ? Number(e.target.value) : null)} /></Field>

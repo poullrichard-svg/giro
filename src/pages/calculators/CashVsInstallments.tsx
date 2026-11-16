@@ -21,7 +21,7 @@ export default function CashVsInstallments() {
           <Field label="Parcela"><MoneyInput value={inst} onChange={setInst} /></Field>
           <Field label="Nº de parcelas"><NumberInput value={count} onChange={(v) => setCount(Math.max(1, Math.round(v)))} suffix="x" /></Field>
         </div>
-        <Field label="Primeira parcela"><Segmented value={firstNow ? 'ato' : 'mes'} onChange={(v) => setFirstNow(v === 'ato')} options={[{ value: 'mes', label: 'daqui a 1 mês' }, { value: 'ato', label: 'no ato' }]} /></Field>
+        <Field label="Primeira parcela" group><Segmented value={firstNow ? 'ato' : 'mes'} onChange={(v) => setFirstNow(v === 'ato')} options={[{ value: 'mes', label: 'daqui a 1 mês' }, { value: 'ato', label: 'no ato' }]} /></Field>
         <RateField label="Quanto seu dinheiro rende" value={rate} onChange={setRate} period={period} onPeriod={setPeriod} />
       </>}
       result={<>
