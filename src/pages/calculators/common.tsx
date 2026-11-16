@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Card, Field, NumberInput, Segmented } from '../../components/ui';
+import { Card, Field, NumberInput, Segmented, Stat, type Tone } from '../../components/ui';
 
 /** Layout padrão: entradas à esquerda, resultado à direita (empilha no celular). */
 export function CalcLayout({ inputs, result }: { inputs: ReactNode; result: ReactNode }) {
@@ -33,14 +33,12 @@ export function TermField({ label = 'Prazo', value, onChange, unit, onUnit }: { 
   );
 }
 
+const TEXT_TO_TONE: Record<string, Tone> = { 'text-emerald-400': 'good', 'text-rose-400': 'bad', 'text-amber-400': 'warn', 'text-sky-400': 'info' };
+
+/** Resultado de calculadora: cartão colorido (o principal fica em destaque). */
 export function Big({ label, value, tone = 'text-white', sub }: { label: string; value: ReactNode; tone?: string; sub?: ReactNode }) {
-  return (
-    <div className="glass rounded-3xl p-4">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${tone}`}>{value}</p>
-      {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
-    </div>
-  );
+  const t = TEXT_TO_TONE[tone] ?? 'brand';
+  return <Stat label={label} value={value} tone={t} sub={sub} />;
 }
 
 export function Tip({ children }: { children: ReactNode }) {

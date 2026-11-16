@@ -9,10 +9,10 @@ export function Donut({ data, size = 176 }: { data: Array<{ label: string; value
   const c = 2 * Math.PI * r;
   let acc = 0;
   return (
-    <div className="flex flex-col items-center gap-5 sm:flex-row">
+    <div className="flex flex-col items-center gap-6 sm:flex-row">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox="0 0 100 100" className="-rotate-90" role="img" aria-label="Gastos por categoria">
-          <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="12" />
+          <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth="12" /><circle cx="50" cy="50" r="31" fill="#0b0915" stroke="rgba(255,255,255,.06)" strokeWidth=".6" />
           {data.map((d, i) => {
             const len = (d.value / total) * c;
             const el = (
@@ -27,21 +27,21 @@ export function Donut({ data, size = 176 }: { data: Array<{ label: string; value
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-[10px] uppercase tracking-wider text-slate-400">Total</span>
-          <Money value={total} className="text-sm font-extrabold text-white" />
+          <span className="label text-slate-500">Total</span>
+          <Money value={total} className="mt-1 font-display text-base font-black text-white" />
         </div>
       </div>
-      <ul className="w-full space-y-2 text-xs">
-        {data.slice(0, 7).map((d) => (
-          <li key={d.label}>
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: d.color, boxShadow: `0 0 8px ${d.color}` }} />
-              <span className="flex-1 truncate text-slate-200">{d.label}</span>
-              <span className="text-slate-500">{((d.value / total) * 100).toFixed(0)}%</span>
-              <span className="w-24 text-right font-semibold text-white">{formatBRL(d.value)}</span>
+      <ul className="stagger-x grid w-full gap-2">
+        {data.slice(0, 6).map((d) => (
+          <li key={d.label} className="surface surface-hover flex items-center gap-3 rounded-2xl px-3.5 py-2.5">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: d.color, boxShadow: `0 0 10px ${d.color}` }} />
+            <div className="min-w-0 flex-1">
+              <p className="label truncate !tracking-[.1em] text-white">{d.label}</p>
+              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5"><div className="fill-x h-full rounded-full" style={{ width: `${(d.value / total) * 100}%`, background: d.color }} /></div>
             </div>
-            <div className="ml-4.5 mt-1 h-1 overflow-hidden rounded-full bg-white/5">
-              <div className="fill-x h-full rounded-full" style={{ width: `${(d.value / total) * 100}%`, background: d.color }} />
+            <div className="text-right">
+              <p className="font-mono text-xs font-extrabold text-white">{formatBRL(d.value)}</p>
+              <p className="font-mono text-[10px] font-bold text-slate-500">{((d.value / total) * 100).toFixed(1)}%</p>
             </div>
           </li>
         ))}
@@ -64,16 +64,16 @@ export function Bars({ data, series }: { data: Array<{ label: string; values: nu
             <div className="flex h-full w-full items-end justify-center gap-1">
               {d.values.map((v, i) => (
                 <div key={i} title={`${series[i].name}: ${formatBRL(v)}`}
-                  className="bar-grow w-full max-w-5 rounded-t-lg transition group-hover:brightness-125"
+                  className="bar-grow w-full max-w-6 rounded-t-[10px] rounded-b-[4px] transition duration-300 group-hover:brightness-125"
                   style={{ height: `${(v / max) * 100}%`, minHeight: v > 0 ? 3 : 0, animationDelay: `${di * 0.06 + i * 0.04}s`,
                     background: `linear-gradient(180deg, ${series[i].color}, ${series[i].to ?? series[i].color + '55'})`, boxShadow: v > 0 ? `0 0 14px ${series[i].color}55` : undefined }} />
               ))}
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-200">{d.label}</span>
+            <span className="label text-slate-500 transition group-hover:text-white">{d.label}</span>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex gap-4 text-xs text-slate-400">
+      <div className="label mt-4 flex gap-5 text-slate-400">
         {series.map((s) => (<span key={s.name} className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: s.color, boxShadow: `0 0 8px ${s.color}` }} />{s.name}</span>))}
       </div>
     </div>

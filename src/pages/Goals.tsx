@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Flag, Plus, Trophy } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Coins, Plus, Target, Trash2, Trophy } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
-import { Button, Card, ConfirmDelete, Empty, Field, Input, Modal, MoneyInput, NumberInput, PageHeader, Progress, Segmented } from '../components/ui';
+import { AddCard, Button, Field, IconChip, Input, Modal, MoneyInput, NumberInput, PageHeader, Progress, Segmented, Tilt, cx } from '../components/ui';
 import { daysUntil, formatBRL, formatDate } from '../lib/format';
 import type { Goal, GoalType } from '../types';
 
@@ -28,36 +28,42 @@ export default function Goals() {
 
   return (
     <div>
-      <PageHeader title="Metas" subtitle="Objetivos financeiros e pessoais" actions={<Button onClick={() => setOpen(true)}><Plus size={16} /> Nova meta</Button>} />
-      {data.goals.length === 0 ? (
-        <Card><Empty icon={<Flag size={32} />} title="Nenhuma meta" text="Ex.: reserva de emergência, trocar de carro, viagem, quitar o cartão." action={<Button onClick={() => setOpen(true)}>Criar meta</Button>} /></Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {data.goals.map((g) => {
-            const pct = g.targetAmount > 0 ? (g.currentAmount / g.targetAmount) * 100 : 0;
-            const done = pct >= 100;
-            const days = g.deadline ? daysUntil(g.deadline) : null;
-            const monthsLeft = days && days > 0 ? Math.max(1, Math.ceil(days / 30)) : null;
-            return (
-              <Card key={g.id}>
-                <div className="mb-3 flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2 font-semibold text-white">{done && <Trophy size={16} className="text-amber-400" />}{g.description}</p>
-                    <p className="text-xs text-slate-500">{g.type === 'financial' ? `${formatBRL(g.currentAmount)} de ${formatBRL(g.targetAmount)}` : `${g.currentAmount.toFixed(0)}% concluído`}{g.deadline ? ` · até ${formatDate(g.deadline)}` : ''}</p>
-                  </div>
-                  <ConfirmDelete onConfirm={() => remove('goals', g.id)} />
+      <PageHeader eyebrow="Objetivos" title="Metas" subtitle="Objetivos financeiros e pessoais" actions={<Button onClick={() => setOpen(true)}><Plus size={16} /> Nova meta</Button>} />
+      <div className="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {data.goals.map((g) => {
+          const pct = g.targetAmount > 0 ? (g.currentAmount / g.targetAmount) * 100 : 0;
+          const done = pct >= 100;
+          const days = g.deadline ? daysUntil(g.deadline) : null;
+          const monthsLeft = days && days > 0 ? Math.max(1, Math.ceil(days / 30)) : null;
+          const fin = g.type === 'financial';
+          return (
+            <Tilt key={g.id} max={5} className={cx('surface rounded-[2rem] p-6', done && 'ring-1 ring-amber-400/40')}>
+              {done && <span className="watermark !opacity-10 text-amber-400"><Trophy size={130} strokeWidth={1.4} /></span>}
+              <div className="pop relative flex items-start gap-3">
+                <IconChip tone={done ? 'warn' : 'good'} solid={done}>{done ? <Trophy size={18} /> : <Target size={18} />}</IconChip>
+                <div className="min-w-0">
+                  <p className="truncate font-display text-lg font-black text-white">{g.description}</p>
+                  <p className="label mt-0.5 text-slate-500">{fin ? `Meta: ${formatBRL(g.targetAmount)}` : 'Meta de atividade'}{g.deadline ? ` · até ${formatDate(g.deadline)}` : ''}</p>
                 </div>
-                <Progress value={pct} tone={done ? 'good' : days !== null && days < 0 ? 'bad' : 'good'} />
-                <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                  <span>{pct.toFixed(0)}%</span>
-                  {g.type === 'financial' && !done && monthsLeft && <span>guarde {formatBRL((g.targetAmount - g.currentAmount) / monthsLeft)}/mês</span>}
+              </div>
+              <div className="pop-sm relative mt-5">
+                <div className="label mb-2 flex justify-between"><span className="text-slate-500">Progresso</span><span className={done ? 'text-amber-400' : 'text-emerald-400'}>{pct.toFixed(0)}%</span></div>
+                <Progress value={pct} tone={done ? 'warn' : days !== null && days < 0 ? 'bad' : 'good'} />
+                <div className="mt-2 flex justify-between font-mono text-[11px] font-extrabold">
+                  <span className="text-emerald-400">{fin ? formatBRL(g.currentAmount) : `${g.currentAmount.toFixed(0)}%`}</span>
+                  <span className="text-slate-500">{done ? 'Concluída! 🎉' : fin ? `${formatBRL(g.targetAmount - g.currentAmount)} faltando` : `${(100 - g.currentAmount).toFixed(0)}% faltando`}</span>
                 </div>
-                {!done && <Button variant="soft" className="mt-3 w-full" onClick={() => setContrib({ goal: g, value: 0 })}>{g.type === 'financial' ? 'Adicionar valor' : 'Atualizar progresso'}</Button>}
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                {fin && !done && monthsLeft && <p className="label mt-2 text-slate-500">Guarde {formatBRL((g.targetAmount - g.currentAmount) / monthsLeft)}/mês</p>}
+              </div>
+              <div className="relative mt-5 grid grid-cols-2 gap-2.5">
+                <Button variant="soft" className="min-h-11 text-[11px]" onClick={() => setContrib({ goal: g, value: 0 })}><Coins size={15} /> {fin ? 'Aportar' : 'Atualizar'}</Button>
+                <DeleteGoal onConfirm={() => remove('goals', g.id)} />
+              </div>
+            </Tilt>
+          );
+        })}
+        <AddCard label="Criar nova meta" onClick={() => setOpen(true)} className={data.goals.length === 0 ? 'md:col-span-2 xl:col-span-3' : 'min-h-[17rem]'} />
+      </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Nova meta" footer={<Button className="w-full" onClick={save}>Criar</Button>}>
         <div className="space-y-4">
@@ -78,4 +84,10 @@ export default function Goals() {
       </Modal>
     </div>
   );
+}
+
+function DeleteGoal({ onConfirm }: { onConfirm: () => void }) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => { if (!armed) return; const t = setTimeout(() => setArmed(false), 3000); return () => clearTimeout(t); }, [armed]);
+  return <Button variant="danger" className={cx('min-h-11 text-[11px]', armed && '!bg-rose-500 !text-white')} onClick={() => (armed ? onConfirm() : setArmed(true))}><Trash2 size={15} /> {armed ? 'Confirmar' : 'Excluir'}</Button>;
 }

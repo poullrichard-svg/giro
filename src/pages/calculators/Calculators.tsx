@@ -17,7 +17,7 @@ export default function Calculators({ tab }: { tab?: string }) {
   const current = TABS.find((t) => t.id === tab) ?? TABS[0];
   return (
     <div>
-      <PageHeader title="Calculadoras" subtitle="Simule antes de decidir" />
+      <PageHeader eyebrow="Simulações" title="Calculadoras" subtitle="Simule antes de decidir" />
       <div className="no-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => go('calculadoras', t.id)} className={cx('flex shrink-0 items-center gap-2 press rounded-2xl px-3.5 py-2.5 text-sm transition', current.id === t.id ? 'bg-gradient-to-r from-brand-500 to-fuchsia-500 font-semibold text-white shadow-lg shadow-brand-500/30' : 'glass text-slate-300 hover:bg-white/10')}>

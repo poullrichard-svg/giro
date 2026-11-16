@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Download, Pencil, Search } from 'lucide-react';
+import { ArrowDown, ArrowDownCircle, ArrowUp, ArrowUpCircle, Download, Pencil, Scale, Search, Wallet } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useQuickAdd } from '../components/Shell';
-import { Button, Card, ConfirmDelete, Empty, IconButton, Input, PageHeader, PeriodNav, Segmented, Select, Stat, cx } from '../components/ui';
-import { CategoryBadge } from '../components/CategoryBadge';
+import { Button, Card, ConfirmDelete, Empty, IconButton, Input, PageHeader, PeriodNav, Row, Segmented, Select, Stat, cx } from '../components/ui';
 import { addMonths, currentMonth, formatBRL, formatDayLabel, monthLabel } from '../lib/format';
 import type { Transaction } from '../types';
 import { downloadCSV } from '../lib/csv';
@@ -33,52 +32,51 @@ export default function Transactions() {
 
   return (
     <div>
-      <PageHeader title="Lançamentos" subtitle="Entradas e saídas do dia a dia" actions={
+      <PageHeader eyebrow="Extrato" title="Lançamentos" subtitle="Entradas e saídas do dia a dia" actions={
         <>
           <PeriodNav label={monthLabel(month)} onPrev={() => setMonth(addMonths(month, -1))} onNext={() => setMonth(addMonths(month, 1))} onToday={() => setMonth(currentMonth())} />
           <Button variant="soft" onClick={() => downloadCSV(`lancamentos-${month}.csv`, list.map((t) => ({ Data: t.date, Tipo: t.type === 'income' ? 'Receita' : 'Despesa', Descrição: t.description, Categoria: t.category, Pagamento: t.paymentMethod, Valor: t.amount })))}><Download size={16} /> CSV</Button>
         </>
       } />
 
-      <div className="mb-4 grid grid-cols-3 gap-3">
-        <Stat label="Entradas" money={inc} tone="good" />
-        <Stat label="Saídas" money={exp} tone="bad" />
-        <Stat label="Resultado" money={inc - exp} tone={inc - exp >= 0 ? 'good' : 'bad'} sub="sem contas fixas" />
+      <div className="stagger mb-5 grid grid-cols-3 gap-3 md:gap-4">
+        <Stat label="Entradas" money={inc} tone="good" icon={<ArrowUpCircle />} />
+        <Stat label="Saídas" money={exp} tone="bad" icon={<ArrowDownCircle />} />
+        <Stat label="Resultado" money={inc - exp} tone={inc - exp >= 0 ? 'default' : 'bad'} icon={<Scale />} sub="sem contas fixas" />
       </div>
 
-      <div className="mb-4 grid gap-2 md:grid-cols-[1fr_auto_200px]">
-        <div className="relative"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" /><Input className="pl-9" placeholder="Buscar…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+      <div className="mb-6 grid gap-2.5 md:grid-cols-[1fr_auto_220px]">
+        <div className="relative"><Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" /><Input className="pl-11" placeholder="Buscar lançamento…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <Segmented value={type} onChange={setType} options={[{ value: 'all', label: 'Todos' }, { value: 'income', label: 'Entradas' }, { value: 'expense', label: 'Saídas' }]} />
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: '', label: 'Todas as categorias' }, ...cats]} />
       </div>
 
       {groups.length === 0 ? (
-        <Card><Empty title="Nenhum lançamento" text="Nada encontrado para esse mês/filtro." action={<Button onClick={() => quickAdd()}>Novo lançamento</Button>} /></Card>
+        <Card><Empty icon={<Wallet size={28} />} title="Nenhum lançamento" text="Nada encontrado para esse mês ou filtro." action={<Button onClick={() => quickAdd()}>Novo lançamento</Button>} /></Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-6">
           {groups.map(([date, items]) => {
             const dayTotal = items.reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0);
             return (
-              <Card key={date} className="p-0 md:p-0">
-                <div className="flex items-center justify-between border-b border-white/5 px-4 py-2.5 text-xs">
-                  <span className="font-semibold capitalize text-slate-300">{formatDayLabel(date)}</span>
-                  <span className={dayTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{formatBRL(dayTotal)}</span>
+              <section key={date}>
+                <div className="mb-2.5 flex items-center justify-between px-1">
+                  <span className="label capitalize text-slate-400">{formatDayLabel(date)}</span>
+                  <span className={cx('rounded-full px-2.5 py-1 font-mono text-[11px] font-extrabold', dayTotal >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400')}>{dayTotal >= 0 ? '+' : '−'} {formatBRL(Math.abs(dayTotal))}</span>
                 </div>
-                <ul className="stagger divide-y divide-white/5">
+                <ul className="stagger space-y-2.5">
                   {items.map((t) => (
-                    <li key={t.id} className="flex items-center gap-3 px-4 py-2">
-                      <CategoryBadge category={t.category} />
-                      <button className="min-w-0 flex-1 text-left" onClick={() => quickAdd({ editing: t })}>
-                        <p className="truncate text-sm text-slate-200">{t.description}</p>
-                        <p className="text-xs text-slate-500">{t.category} · {t.paymentMethod}</p>
-                      </button>
-                      <span className={cx('whitespace-nowrap text-sm font-semibold', t.type === 'income' ? 'text-emerald-400' : 'text-rose-400')}>{t.type === 'income' ? '+' : '−'} {formatBRL(t.amount)}</span>
-                      <IconButton label="Editar" className="hidden md:inline-flex" onClick={() => quickAdd({ editing: t })}><Pencil size={16} /></IconButton>
-                      <ConfirmDelete onConfirm={() => remove('transactions', t.id)} />
-                    </li>
+                    <Row key={t.id} tone={t.type === 'income' ? 'good' : 'bad'}
+                      icon={t.type === 'income' ? <ArrowUp size={19} strokeWidth={2.6} /> : <ArrowDown size={19} strokeWidth={2.6} />}
+                      title={t.description} subtitle={`${t.category} · ${t.paymentMethod}`}
+                      amount={`${t.type === 'income' ? '+' : '−'} ${formatBRL(t.amount)}`} amountTone={t.type === 'income' ? 'good' : 'bad'}
+                      onClick={() => quickAdd({ editing: t })}
+                      actions={<>
+                        <IconButton label="Editar" className="hidden md:inline-flex" onClick={() => quickAdd({ editing: t })}><Pencil size={15} /></IconButton>
+                        <ConfirmDelete onConfirm={() => remove('transactions', t.id)} />
+                      </>} />
                   ))}
                 </ul>
-              </Card>
+              </section>
             );
           })}
         </div>

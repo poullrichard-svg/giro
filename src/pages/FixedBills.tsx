@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Circle, Pencil, Plus, Repeat } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, CalendarClock, CheckCircle2, Pencil, Plus, Repeat } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
-import { Button, Card, ConfirmDelete, Empty, Field, IconButton, Input, Modal, MoneyInput, PageHeader, PeriodNav, Progress, Segmented, Select, Stat, cx } from '../components/ui';
+import { AddCard, Button, Card, Check, ConfirmDelete, Empty, Field, IconButton, Input, Modal, MoneyInput, PageHeader, PeriodNav, Progress, Row, Segmented, Select, Stat } from '../components/ui';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../lib/categories';
 import { addMonths, currentMonth, formatBRL, localISODate, monthLabel } from '../lib/format';
 import type { FixedBill, TxType } from '../types';
@@ -45,52 +45,47 @@ export default function FixedBills() {
     else await insert('fixedPayments', { fixedId: bill.id, month, amount: bill.amount });
   };
 
-  const Row = ({ b }: { b: FixedBill }) => {
+  const BillRow = ({ b }: { b: FixedBill }) => {
     const paid = paidMap.has(b.id);
     const late = !paid && b.type === 'expense' && month === today.slice(0, 7) && b.dueDay && b.dueDay < Number(today.slice(8));
     return (
-      <li className="flex items-center gap-3 px-4 py-2.5">
-        {(
-          <button onClick={() => togglePaid(b)} aria-label={paid ? 'Desmarcar pago' : 'Marcar como pago'} className={paid ? 'text-emerald-400' : 'text-slate-600 hover:text-slate-300'}>
-            {paid ? <CheckCircle2 size={22} /> : <Circle size={22} />}
-          </button>
-        )}
-        <button className="min-w-0 flex-1 text-left" onClick={() => openForm(b)}>
-          <p className={cx('truncate text-sm', paid ? 'text-slate-500 line-through' : 'text-slate-200')}>{b.description}</p>
-          <p className={cx('text-xs', late ? 'text-rose-400' : 'text-slate-500')}>{b.category}{b.dueDay ? ` · dia ${b.dueDay}` : ''}{late ? ' · atrasada' : ''}</p>
-        </button>
-        <span className={cx('text-sm font-semibold', b.type === 'income' ? 'text-emerald-400' : 'text-rose-400')}>{formatBRL(b.amount)}</span>
-        <IconButton label="Editar" className="hidden md:inline-flex" onClick={() => openForm(b)}><Pencil size={16} /></IconButton>
-        <ConfirmDelete onConfirm={() => remove('fixed', b.id)} />
-      </li>
+      <Row muted={paid} leading={<Check checked={paid} onChange={() => togglePaid(b)} label={paid ? 'Desmarcar pago' : 'Marcar como pago'} />}
+        title={b.description}
+        subtitle={<span className={late ? 'text-rose-400' : undefined}>{b.category}{b.dueDay ? ` · dia ${b.dueDay}` : ''}{late ? ' · atrasada' : paid ? ' · pago' : ''}</span>}
+        amount={formatBRL(b.amount)} amountTone={b.type === 'income' ? 'good' : 'bad'} onClick={() => openForm(b)}
+        actions={<>
+          <IconButton label="Editar" className="hidden md:inline-flex" onClick={() => openForm(b)}><Pencil size={15} /></IconButton>
+          <ConfirmDelete onConfirm={() => remove('fixed', b.id)} />
+        </>} />
     );
   };
 
+
   return (
     <div>
-      <PageHeader title="Contas fixas" subtitle="Se repetem todo mês — marque quando pagar" actions={
+      <PageHeader eyebrow="Todo mês" title="Contas fixas" subtitle="Se repetem todo mês — marque quando pagar" actions={
         <>
           <PeriodNav label={monthLabel(month)} onPrev={() => setMonth(addMonths(month, -1))} onNext={() => setMonth(addMonths(month, 1))} onToday={() => setMonth(currentMonth())} />
           <Button onClick={() => openForm()}><Plus size={16} /> Nova</Button>
         </>
       } />
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Despesas fixas" money={totalExp} tone="bad" />
-        <Stat label="Receitas fixas" money={totalInc} tone="good" />
-        <Stat label="Já pago" money={paidExp} sub={`${expenses.filter((x) => paidMap.has(x.id)).length}/${expenses.length} contas`} />
-        <Stat label="Falta pagar" money={totalExp - paidExp} tone="warn" />
+      <div className="stagger mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <Stat label="Despesas fixas" money={totalExp} tone="bad" icon={<ArrowDownCircle />} />
+        <Stat label="Receitas fixas" money={totalInc} tone="good" icon={<ArrowUpCircle />} />
+        <Stat label="Já pago" money={paidExp} tone="info" icon={<CheckCircle2 />} sub={`${expenses.filter((x) => paidMap.has(x.id)).length}/${expenses.length} contas`} />
+        <Stat label="Falta pagar" money={totalExp - paidExp} tone="warn" icon={<CalendarClock />} />
       </div>
-      {totalExp > 0 && <div className="mb-4"><Progress value={(paidExp / totalExp) * 100} /></div>}
+      {totalExp > 0 && <div className="mb-6"><Progress value={(paidExp / totalExp) * 100} /></div>}
 
       {sorted.length === 0 ? (
-        <Card><Empty icon={<Repeat size={32} />} title="Nenhuma conta fixa" text="Cadastre aluguel, luz, internet, salário… e o app soma no saldo de todo mês." action={<Button onClick={() => openForm()}>Cadastrar conta</Button>} /></Card>
+        <Card><Empty icon={<Repeat size={28} />} title="Nenhuma conta fixa" text="Cadastre aluguel, luz, internet, salário… e o app soma no saldo de todo mês." action={<Button onClick={() => openForm()}>Cadastrar conta</Button>} /></Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          <Card title="Despesas" className="p-0 md:p-0 [&>header]:px-4 [&>header]:pt-4" action={<Button variant="ghost" onClick={() => openForm(undefined, 'expense')}><Plus size={14} /></Button>}>
-            {expenses.length ? <ul className="divide-y divide-white/5">{expenses.map((b) => <Row key={b.id} b={b} />)}</ul> : <Empty title="Sem despesas fixas" />}
+          <Card title={<><ArrowDownCircle size={14} className="text-rose-400" /> Despesas</>} action={<IconButton label="Nova despesa fixa" onClick={() => openForm(undefined, 'expense')}><Plus size={16} /></IconButton>}>
+            {expenses.length ? <ul className="stagger space-y-2.5">{expenses.map((b) => <BillRow key={b.id} b={b} />)}</ul> : <AddCard label="Nova despesa fixa" onClick={() => openForm(undefined, 'expense')} className="w-full" />}
           </Card>
-          <Card title="Receitas" className="p-0 md:p-0 [&>header]:px-4 [&>header]:pt-4" action={<Button variant="ghost" onClick={() => openForm(undefined, 'income')}><Plus size={14} /></Button>}>
-            {incomes.length ? <ul className="divide-y divide-white/5">{incomes.map((b) => <Row key={b.id} b={b} />)}</ul> : <Empty title="Sem receitas fixas" />}
+          <Card title={<><ArrowUpCircle size={14} className="text-emerald-400" /> Receitas</>} action={<IconButton label="Nova receita fixa" onClick={() => openForm(undefined, 'income')}><Plus size={16} /></IconButton>}>
+            {incomes.length ? <ul className="stagger space-y-2.5">{incomes.map((b) => <BillRow key={b.id} b={b} />)}</ul> : <AddCard label="Nova receita fixa" onClick={() => openForm(undefined, 'income')} className="w-full" />}
           </Card>
         </div>
       )}

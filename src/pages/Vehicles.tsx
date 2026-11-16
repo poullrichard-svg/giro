@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarClock, CarFront, Droplets, FileText, Gauge, Pencil, Plus, Shield, Wrench } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CarFront, Droplets, FileText, Fuel, Gauge, Pencil, Plus, Shield, Wrench } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
-import { Button, Card, ConfirmDelete, Empty, Field, Input, Modal, MoneyInput, NumberInput, PageHeader, Progress, Segmented, Select, Stat, Tilt, cx } from '../components/ui';
+import { Button, Card, ConfirmDelete, Empty, Field, Input, Modal, MoneyInput, NumberInput, PageHeader, Progress, Segmented, Row, Select, Stat, Tilt, cx } from '../components/ui';
 import { VEHICLE_EXPENSE_CATEGORIES } from '../lib/categories';
 import { daysUntil, formatBRL, formatDate, formatNumber, localISODate } from '../lib/format';
 import { oilStatus, vehicleAlerts, vehicleFixedMonthly } from '../lib/stats';
@@ -31,7 +31,7 @@ export default function Vehicles({ id }: { id?: string }) {
 
   return (
     <div>
-      <PageHeader title="Veículos" subtitle="Documentos, manutenção e custos de cada carro" actions={<Button onClick={() => setForm({ open: true })}><Plus size={16} /> Adicionar veículo</Button>} />
+      <PageHeader eyebrow="Garagem" title="Veículos" subtitle="Documentos, manutenção e custos de cada carro" actions={<Button onClick={() => setForm({ open: true })}><Plus size={16} /> Adicionar veículo</Button>} />
       {data.vehicles.length === 0 ? (
         <Card><Empty icon={<CarFront size={32} />} title="Nenhum veículo cadastrado" text="Cadastre placa, IPVA, seguro, parcela e quilometragem para receber alertas e saber o custo real por km." action={<Button onClick={() => setForm({ open: true })}>Cadastrar veículo</Button>} /></Card>
       ) : (
@@ -40,10 +40,10 @@ export default function Vehicles({ id }: { id?: string }) {
             const alerts = vehicleAlerts([v]);
             const oil = oilStatus(v);
             return (
-              <Tilt as="button" key={v.id} onClick={() => go('veiculos', v.id)} className={cx('glass rounded-3xl p-4 text-left', !v.active && 'opacity-50')}>
+              <Tilt as="button" key={v.id} onClick={() => go('veiculos', v.id)} className={cx('surface rounded-[2rem] p-5 text-left', !v.active && 'opacity-50')}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-white">{v.name}</p>
+                    <p className="truncate font-display text-lg font-black text-white">{v.name}</p>
                     <p className="truncate text-xs text-slate-500">{[v.brand, v.model, v.year].filter(Boolean).join(' · ') || '—'}</p>
                     <span className="mt-2 inline-block rounded-md bg-white/5 px-2 py-0.5 text-[11px] text-slate-300">{OWNERSHIP[v.ownership]}</span>
                   </div>
@@ -69,11 +69,9 @@ function DocRow({ icon, label, value, due, perMonth }: { icon: React.ReactNode; 
   const d = due ? daysUntil(due) : null;
   const tone = d === null ? 'text-slate-500' : d < 0 ? 'text-rose-400' : d <= 30 ? 'text-amber-400' : 'text-emerald-400';
   return (
-    <li className="flex items-center gap-3 py-2.5">
-      <span className="text-slate-500">{icon}</span>
-      <div className="flex-1"><p className="text-sm text-slate-200">{label}</p><p className={cx('text-xs', tone)}>{due ? `${d! < 0 ? 'Venceu' : 'Vence'} em ${formatDate(due)}${d! >= 0 ? ` (${d}d)` : ''}` : 'Sem data cadastrada'}</p></div>
-      <span className="text-sm font-semibold text-slate-200">{formatBRL(value)}{perMonth && <span className="text-xs text-slate-500">/mês</span>}</span>
-    </li>
+    <Row tone={d === null ? 'brand' : d < 0 ? 'bad' : d <= 30 ? 'warn' : 'good'} icon={icon} title={label}
+      subtitle={<span className={tone}>{due ? `${d! < 0 ? 'Venceu' : 'Vence'} em ${formatDate(due)}${d! >= 0 ? ` (${d}d)` : ''}` : 'Sem data cadastrada'}</span>}
+      amount={`${formatBRL(value)}${perMonth ? '/mês' : ''}`} />
   );
 }
 
@@ -133,16 +131,14 @@ function VehicleDetail({ v, onEdit }: { v: Vehicle; onEdit: () => void }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Documentos e custos fixos">
-          <ul className="divide-y divide-white/5">
+          <ul className="stagger space-y-2.5">
             <DocRow icon={<FileText size={18} />} label="IPVA" value={v.ipvaValue} due={v.ipvaDueDate} />
             <DocRow icon={<CalendarClock size={18} />} label="Licenciamento" value={v.licensingValue} due={v.licensingDueDate} />
             <DocRow icon={<Shield size={18} />} label="Seguro" value={v.insuranceValue} due={v.insuranceDueDate} perMonth />
             {v.ownership !== 'owned' && (
-              <li className="flex items-center gap-3 py-2.5">
-                <span className="text-slate-500"><CarFront size={18} /></span>
-                <div className="flex-1"><p className="text-sm text-slate-200">{v.ownership === 'rented' ? 'Aluguel' : 'Parcela'}</p>{financedLeft > 0 && <p className="text-xs text-slate-500">{v.installmentsRemaining} parcelas restantes · saldo ≈ {formatBRL(financedLeft)}</p>}</div>
-                <span className="text-sm font-semibold text-slate-200">{formatBRL(v.installmentValue)}<span className="text-xs text-slate-500">/mês</span></span>
-              </li>
+              <Row tone="info" icon={<CarFront size={18} />} title={v.ownership === 'rented' ? 'Aluguel' : 'Parcela'}
+                subtitle={financedLeft > 0 ? `${v.installmentsRemaining} parcelas · saldo ≈ ${formatBRL(financedLeft)}` : 'mensal'}
+                amount={`${formatBRL(v.installmentValue)}/mês`} />
             )}
           </ul>
         </Card>
@@ -167,20 +163,17 @@ function VehicleDetail({ v, onEdit }: { v: Vehicle; onEdit: () => void }) {
       <Card className="mt-4" title={`Gastos em ${year} · ${formatBRL(yearTotal)}`} action={<Select className="h-9 min-h-9 w-24" value={year} onChange={(e) => setYear(e.target.value)} options={years} />}>
         {byCat.length > 0 && (
           <div className="mb-4 flex flex-wrap gap-2">
-            {byCat.map(([c, val]) => <span key={c} className="rounded-lg bg-white/5 px-2.5 py-1 text-xs text-slate-300">{c}: <strong className="text-white">{formatBRL(val)}</strong></span>)}
+            {byCat.map(([c, val]) => <span key={c} className="label rounded-full bg-white/[.05] px-3 py-1.5 text-slate-400 ring-1 ring-white/10">{c}: <strong className="font-mono text-white">{formatBRL(val)}</strong></span>)}
           </div>
         )}
         {yearExp.length === 0 ? <Empty icon={<Wrench size={28} />} title="Sem gastos lançados" text="Abastecimentos, revisões, pneus, multas, IPVA…" /> : (
-          <ul className="divide-y divide-white/5">
+          <ul className="stagger space-y-2.5">
             {yearExp.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 py-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-slate-200">{e.category}{e.description ? ` · ${e.description}` : ''}</p>
-                  <p className="text-xs text-slate-500">{formatDate(e.date)}{e.odometer ? ` · ${formatNumber(e.odometer)} km` : ''}{e.liters ? ` · ${formatNumber(e.liters, 1)} L` : ''}</p>
-                </div>
-                <span className="text-sm font-semibold text-rose-400">{formatBRL(e.amount)}</span>
-                <ConfirmDelete onConfirm={() => remove('vehicleExpenses', e.id)} />
-              </li>
+              <Row key={e.id} tone={e.category === 'Combustível' ? 'bad' : e.category === 'Troca de óleo' ? 'warn' : 'info'}
+                icon={e.category === 'Combustível' ? <Fuel size={18} /> : e.category === 'Troca de óleo' ? <Droplets size={18} /> : <Wrench size={18} />}
+                title={`${e.category}${e.description ? ` · ${e.description}` : ''}`}
+                subtitle={`${formatDate(e.date)}${e.odometer ? ` · ${formatNumber(e.odometer)} km` : ''}${e.liters ? ` · ${formatNumber(e.liters, 1)} L` : ''}`}
+                amount={formatBRL(e.amount)} amountTone="bad" actions={<ConfirmDelete onConfirm={() => remove('vehicleExpenses', e.id)} />} />
             ))}
           </ul>
         )}

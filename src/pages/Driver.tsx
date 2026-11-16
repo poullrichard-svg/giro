@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Car, Clock, Fuel, Gauge, Pencil, Plus, Route as RouteIcon, Target, Utensils } from 'lucide-react';
+import { CalendarDays, Car, CircleDollarSign, Pencil, Plus, Smartphone, Target, TrendingDown, TrendingUp } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
-import { Button, Card, ConfirmDelete, Empty, Field, IconButton, Input, Modal, MoneyInput, NumberInput, PageHeader, PeriodNav, Progress, Segmented, Select, Stat } from '../components/ui';
+import { BigTile, Button, Card, ConfirmDelete, Empty, Field, IconButton, IconChip, Input, MiniStat, Modal, MoneyInput, NumberInput, PageHeader, PeriodNav, Progress, Row, Segmented, Select, cx } from '../components/ui';
 import { DRIVER_APPS } from '../lib/categories';
 import { addDays, addMonths, elapsedDays, formatBRL, formatDayLabel, formatNumber, hoursToHHMM, localISODate, monthLabel, parseISODate } from '../lib/format';
 import { driverStats } from '../lib/stats';
 import type { DriverApp, DriverSession } from '../types';
 
 type Mode = 'dia' | 'semana' | 'mes';
-const APP_COLORS: Record<string, string> = { Uber: '#e2e8f0', '99': '#facc15', InDrive: '#a3e635', Particular: '#38bdf8', Outro: '#a78bfa' };
+const APP_COLORS: Record<string, string> = { Uber: '#94a3b8', '99': '#f59e0b', InDrive: '#84cc16', Particular: '#10b981', Outro: '#7c5cff' };
 
 const weekStart = (iso: string) => { const d = parseISODate(iso); return addDays(iso, -((d.getDay() + 6) % 7)); };
 
@@ -42,7 +42,7 @@ export default function Driver() {
 
   return (
     <div>
-      <PageHeader title="Painel do motorista" subtitle="Ganhos, custos e lucro real das corridas" actions={
+      <PageHeader eyebrow="Corridas" title="Painel do motorista" subtitle="Ganhos, custos e lucro real das corridas" actions={
         <>
           <Segmented value={mode} onChange={setMode} options={[{ value: 'dia', label: 'Dia' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mês' }]} />
           <PeriodNav label={period.label} onPrev={() => step(-1)} onNext={() => step(1)} onToday={() => setDay(localISODate())} />
@@ -50,70 +50,75 @@ export default function Driver() {
         </>
       } />
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Faturamento bruto" money={st.gross} tone="good" sub={mode !== 'dia' ? `média ${formatBRL(st.avgPerDay)}/dia` : undefined} />
-        <Stat label="Custos operacionais" money={st.operationalCost} tone="bad" sub={`comb. ${formatBRL(st.fuel)} · alim. ${formatBRL(st.food)}`} />
-        <Stat label="Custo fixo do carro" money={st.fixedCost} tone="warn" sub={`parcela/seguro/IPVA · ${period.days} ${period.days === 1 ? 'dia' : 'dias'}`} />
-        <Stat label="Lucro líquido" money={st.netProfit} tone={st.netProfit >= 0 ? 'good' : 'bad'} sub={`antes dos fixos: ${formatBRL(st.operationalProfit)}`} />
+      <div className="stagger mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <MiniStat label="Km rodados" value={`${formatNumber(st.km)} km`} />
+        <MiniStat label="Corridas" value={st.trips} />
+        <MiniStat label="Faturamento" money={st.gross} tone="good" />
+        <MiniStat label="Custos" money={st.operationalCost + st.fixedCost} tone="bad" />
       </div>
 
-      <Card className="mb-4">
-        <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-          <span className="flex items-center gap-2 text-slate-300"><Target size={16} className="text-brand-400" /> Meta {mode === 'dia' ? 'do dia' : mode === 'semana' ? 'da semana (6 dias)' : 'do mês'}</span>
-          <span className="text-slate-400">{formatBRL(st.gross)} / {formatBRL(goalTarget)}</span>
+      <div className="stagger mb-5 grid gap-3 md:grid-cols-3 md:gap-4">
+        <BigTile label="Ganhos brutos" money={st.gross} tone="good" icon={<TrendingUp />} sub={mode !== 'dia' ? `média ${formatBRL(st.avgPerDay)}/dia` : `${st.trips} corridas`} />
+        <BigTile label="Gastos totais" money={st.operationalCost + st.fixedCost} tone="bad" icon={<TrendingDown />} sub={`combustível ${formatBRL(st.fuel)} · fixos ${formatBRL(st.fixedCost)}`} />
+        <BigTile label="Lucro líquido" money={st.netProfit} tone={st.netProfit >= 0 ? 'warn' : 'bad'} icon={<CircleDollarSign />} sub={`antes dos fixos ${formatBRL(st.operationalProfit)}`} />
+      </div>
+
+      <Card className="mb-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <span className="label flex items-center gap-2 text-slate-300"><Target size={15} className="text-brand-300" /> Meta {mode === 'dia' ? 'do dia' : mode === 'semana' ? 'da semana (6 dias)' : 'do mês'}</span>
+          <span className="font-mono text-xs font-extrabold text-slate-300">{formatBRL(st.gross)} <span className="text-slate-600">/</span> {formatBRL(goalTarget)}</span>
         </div>
-        <Progress value={(st.gross / goalTarget) * 100} tone={st.gross >= goalTarget ? 'good' : 'warn'} />
-        <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-          Meta diária: <MoneyInput value={goal} onChange={setGoal} className="h-9 min-h-9 w-32 py-0 text-xs" />
-          {st.gross < goalTarget && <span>· faltam {formatBRL(goalTarget - st.gross)}</span>}
+        <Progress value={(st.gross / goalTarget) * 100} tone={st.gross >= goalTarget ? 'good' : 'brand'} />
+        <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          <span className="label text-slate-500">Meta diária</span>
+          <MoneyInput value={goal} onChange={setGoal} className="h-10 min-h-10 w-36 rounded-xl py-0 text-xs" />
+          <span className={cx('label', st.gross >= goalTarget ? 'text-emerald-400' : 'text-slate-500')}>{st.gross >= goalTarget ? '🎉 Meta batida!' : `faltam ${formatBRL(goalTarget - st.gross)}`}</span>
         </div>
       </Card>
 
-      <div className="mb-4 grid grid-cols-3 gap-3 md:grid-cols-6">
-        <Stat label="Corridas" value={st.trips} icon={<RouteIcon size={14} />} />
-        <Stat label="Horas" value={hoursToHHMM(st.hours)} icon={<Clock size={14} />} />
-        <Stat label="Km rodados" value={formatNumber(st.km)} icon={<Gauge size={14} />} />
-        <Stat label="R$ / hora" money={st.perHour} sub={`lucro ${formatBRL(st.profitPerHour)}`} />
-        <Stat label="R$ / km" money={st.perKm} sub={`custo ${formatBRL(st.costPerKm)}`} />
-        <Stat label="R$ / corrida" money={st.perTrip} sub={`lucro ${formatBRL(st.profitPerTrip)}`} />
+      <div className="stagger mb-6 grid grid-cols-3 gap-2.5 md:gap-3">
+        <MiniStat label="Horas trabalhadas" value={hoursToHHMM(st.hours)} />
+        <MiniStat label="Fat. por hora" money={st.perHour} sub={`lucro ${formatBRL(st.profitPerHour)}`} />
+        <MiniStat label="Fat. por km" money={st.perKm} sub={`custo ${formatBRL(st.costPerKm)}`} />
+        <MiniStat label="Fat. por corrida" money={st.perTrip} />
+        <MiniStat label="Lucro por hora" money={st.profitPerHour} tone="warn" />
+        <MiniStat label="Lucro por km" money={st.profitPerKm} tone="warn" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
-        <Card title="Por aplicativo">
-          {st.byApp.length === 0 ? <p className="py-6 text-center text-xs text-slate-500">Sem corridas no período</p> : (
-            <ul className="space-y-3">
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">
+        <Card title={<><Smartphone size={14} className="text-brand-300" /> Faturamento por aplicativo</>}>
+          {st.byApp.length === 0 ? <p className="label py-8 text-center text-slate-600">Sem corridas no período</p> : (
+            <ul className="stagger space-y-2.5">
               {st.byApp.map((a) => (
-                <li key={a.label}>
-                  <div className="mb-1 flex justify-between text-sm"><span className="text-slate-300">{a.label}</span><span className="font-semibold text-white">{formatBRL(a.value)}</span></div>
-                  <div className="h-2 rounded-full bg-white/5"><div className="h-full rounded-full" style={{ width: `${(a.value / st.gross) * 100}%`, background: APP_COLORS[a.label] ?? '#10b981' }} /></div>
+                <li key={a.label} className="group surface surface-hover flex items-center gap-3 rounded-[1.4rem] p-3">
+                  <IconChip tone={APP_COLORS[a.label] ?? '#7c5cff'}><Car size={18} /></IconChip>
+                  <div className="min-w-0 flex-1">
+                    <p className="label text-slate-500">Plataforma</p>
+                    <p className="font-display text-[15px] font-black text-white">{a.label}</p>
+                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5"><div className="fill-x h-full rounded-full" style={{ width: `${(a.value / st.gross) * 100}%`, background: APP_COLORS[a.label] ?? '#7c5cff' }} /></div>
+                  </div>
+                  <div className="text-right"><p className="label text-slate-500">Ganhos</p><p className="font-mono text-sm font-extrabold text-white">{formatBRL(a.value)}</p></div>
                 </li>
               ))}
             </ul>
           )}
         </Card>
-        <Card title="Registros" className="p-0 md:p-0 [&>header]:px-4 [&>header]:pt-4">
+        <Card title={<><CalendarDays size={14} className="text-brand-300" /> Registros</>}>
           {st.sessions.length === 0 ? (
-            <Empty icon={<Car size={32} />} title="Nenhum registro no período" text="Registre o fechamento do dia: quanto fez em cada app, km, horas e gastos." action={<Button onClick={() => setForm({ open: true })}>Registrar dia</Button>} />
+            <Empty icon={<Car size={28} />} title="Nenhum registro no período" text="Registre o fechamento do dia: quanto fez em cada app, km, horas e gastos." action={<Button onClick={() => setForm({ open: true })}>Registrar dia</Button>} />
           ) : (
-            <ul className="divide-y divide-white/5">
+            <ul className="stagger space-y-2.5">
               {st.sessions.map((s) => {
                 const v = data.vehicles.find((x) => x.id === s.vehicleId);
                 return (
-                  <li key={s.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-[11px] font-bold" style={{ color: APP_COLORS[s.app] }}>{s.app.slice(0, 3)}</span>
-                    <button className="min-w-0 flex-1 text-left" onClick={() => setForm({ open: true, editing: s })}>
-                      <p className="text-sm text-slate-200">{formatDayLabel(s.date)} · {s.trips} corridas · {formatNumber(s.kmDriven)} km · {s.hoursWorked}</p>
-                      <p className="flex flex-wrap gap-x-3 text-xs text-slate-500">
-                        {s.fuelSpent > 0 && <span className="flex items-center gap-1"><Fuel size={12} />{formatBRL(s.fuelSpent)}</span>}
-                        {s.foodSpent > 0 && <span className="flex items-center gap-1"><Utensils size={12} />{formatBRL(s.foodSpent)}</span>}
-                        {v && <span>{v.name}</span>}
-                        {s.observation && <span className="truncate">{s.observation}</span>}
-                      </p>
-                    </button>
-                    <span className="text-sm font-semibold text-emerald-400">{formatBRL(s.amount)}</span>
-                    <IconButton label="Editar" className="hidden md:inline-flex" onClick={() => setForm({ open: true, editing: s })}><Pencil size={16} /></IconButton>
-                    <ConfirmDelete onConfirm={() => remove('sessions', s.id)} />
-                  </li>
+                  <Row key={s.id} tone={APP_COLORS[s.app] ?? '#7c5cff'} icon={<span className="font-display text-[11px] font-black">{s.app.slice(0, 3)}</span>}
+                    title={`${formatDayLabel(s.date)} · ${s.trips} corridas`}
+                    subtitle={[`${formatNumber(s.kmDriven)} km`, s.hoursWorked, s.fuelSpent > 0 && `comb. ${formatBRL(s.fuelSpent)}`, v?.name].filter(Boolean).join(' · ')}
+                    amount={formatBRL(s.amount)} amountTone="good" onClick={() => setForm({ open: true, editing: s })}
+                    actions={<>
+                      <IconButton label="Editar" className="hidden md:inline-flex" onClick={() => setForm({ open: true, editing: s })}><Pencil size={15} /></IconButton>
+                      <ConfirmDelete onConfirm={() => remove('sessions', s.id)} />
+                    </>} />
                 );
               })}
             </ul>

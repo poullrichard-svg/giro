@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { CheckSquare, ShoppingCart, Square } from 'lucide-react';
+import { ListChecks, Plus, ShoppingCart } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useQuickAdd } from '../components/Shell';
-import { Button, Card, ConfirmDelete, Empty, Input, MoneyInput, NumberInput, PageHeader, Select, Stat, cx } from '../components/ui';
+import { BigTile, Button, Card, Check, ConfirmDelete, Empty, Input, MoneyInput, NumberInput, PageHeader, Row, Select } from '../components/ui';
 import { formatBRL } from '../lib/format';
 
 export default function Shopping() {
@@ -30,36 +30,34 @@ export default function Shopping() {
 
   return (
     <div>
-      <PageHeader title="Lista de compras" subtitle="Marque o que já pegou e veja o total do carrinho" />
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <Stat label="Total estimado" money={total} />
-        <Stat label="No carrinho" money={inCart} tone="good" sub={`${items.filter((i) => i.completed).length}/${items.length} itens`} />
+      <PageHeader eyebrow="Mercado" title="Lista de compras" subtitle="Marque o que já pegou e veja o total do carrinho" />
+      <div className="stagger mb-5 grid grid-cols-2 gap-3 md:gap-4">
+        <BigTile label="Gasto planejado total" money={total} tone="good" icon={<ShoppingCart />} />
+        <BigTile label="Itens na lista" value={`${items.length} ${items.length === 1 ? 'item' : 'itens'}`} tone="info" icon={<ListChecks />} sub={`${items.filter((i) => i.completed).length} no carrinho · ${formatBRL(inCart)}`} />
       </div>
-      <form onSubmit={add} className="mb-4 grid grid-cols-[1fr_70px_80px] gap-2 md:grid-cols-[1fr_90px_90px_140px_auto]">
+      <form onSubmit={add} className="surface mb-5 grid grid-cols-[72px_104px_1fr] gap-2 rounded-[1.75rem] p-3 md:grid-cols-[1fr_90px_110px_150px_auto]">
         <Input className="col-span-3 md:col-span-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="Adicionar item…" />
         <NumberInput value={qty} onChange={setQty} />
         <Select value={unit} onChange={(e) => setUnit(e.target.value)} options={['UN', 'KG', 'G', 'L', 'ML', 'PCT', 'CX']} />
         <MoneyInput value={price} onChange={setPrice} placeholder="Preço" />
-        <Button type="submit" className="col-span-3 md:col-span-1">Adicionar</Button>
+        <Button type="submit" className="col-span-3 md:col-span-1"><Plus size={16} strokeWidth={3} /> Adicionar</Button>
       </form>
-      <Card className="p-0 md:p-0">
-        {items.length === 0 ? <Empty icon={<ShoppingCart size={32} />} title="Lista vazia" /> : (
-          <ul className="divide-y divide-white/5">
+      <Card title={<><ListChecks size={14} className="text-emerald-400" /> Checklist de compras</>} action={<span className="label hidden rounded-full bg-white/[.04] px-3 py-1.5 text-slate-500 ring-1 ring-white/5 md:inline">Dica: toque no preço para alterar</span>}>
+        {items.length === 0 ? <Empty icon={<ShoppingCart size={28} />} title="Lista vazia" text="Adicione o que precisa comprar e acompanhe o total." /> : (
+          <ul className="stagger space-y-2.5">
             {items.map((i) => (
-              <li key={i.id} className="flex items-center gap-3 px-4 py-2">
-                <button onClick={() => update('shopping', i.id, { completed: !i.completed })} className={i.completed ? 'text-emerald-400' : 'text-slate-500'} aria-label="Marcar">{i.completed ? <CheckSquare size={22} /> : <Square size={22} />}</button>
-                <div className="min-w-0 flex-1">
-                  <p className={cx('truncate text-sm', i.completed ? 'text-slate-500 line-through' : 'text-slate-200')}>{i.name}</p>
-                  <p className="text-xs text-slate-500">{i.quantity} {i.unit}{i.estimatedPrice > 0 ? ` × ${formatBRL(i.estimatedPrice)}` : ''}</p>
-                </div>
-                <div className="w-28"><MoneyInput value={i.estimatedPrice} onChange={(v) => update('shopping', i.id, { estimatedPrice: v })} className="h-9 min-h-9 text-right text-xs" placeholder="preço" /></div>
-                <ConfirmDelete onConfirm={() => remove('shopping', i.id)} />
-              </li>
+              <Row key={i.id} muted={i.completed}
+                leading={<Check checked={i.completed} onChange={() => update('shopping', i.id, { completed: !i.completed })} label={i.completed ? 'Tirar do carrinho' : 'Colocar no carrinho'} />}
+                title={i.name} subtitle={`${i.quantity} ${i.unit}${i.estimatedPrice > 0 ? ` × ${formatBRL(i.estimatedPrice)}` : ''}`}
+                actions={<>
+                  <div className="w-28 md:w-32"><MoneyInput value={i.estimatedPrice} onChange={(v) => update('shopping', i.id, { estimatedPrice: v })} className="h-10 min-h-10 rounded-xl text-right font-mono text-xs font-extrabold text-emerald-400" placeholder="preço" /></div>
+                  <ConfirmDelete onConfirm={() => remove('shopping', i.id)} />
+                </>} />
             ))}
           </ul>
         )}
       </Card>
-      {inCart > 0 && <Button className="mt-4 w-full" onClick={finish}>Finalizar compra e lançar {formatBRL(inCart)}</Button>}
+      {inCart > 0 && <Button className="mt-5 w-full" onClick={finish}>Finalizar compra e lançar {formatBRL(inCart)}</Button>}
     </div>
   );
 }

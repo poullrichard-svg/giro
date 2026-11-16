@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type PointerEvent as RPointerEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { cloneElement, isValidElement, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type PointerEvent as RPointerEvent, type ReactElement, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { Check as CheckIcon, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { formatBRL } from '../lib/format';
 
 export const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(' ');
 
 /** Junta classes base + extras; se o extra define largura/altura/tamanho de texto, a base cede. */
-const GROUPS = [/^w-/, /^min-h-/, /^h-/, /^text-(xs|sm|base|lg|xl|\d)/, /^py-/];
+const GROUPS = [/^w-/, /^min-h-/, /^h-/, /^text-(xs|sm|base|lg|xl|\d)/, /^py-/, /^rounded/];
 export const merge = (base: string, extra?: string) => {
   if (!extra) return base;
   const ex = extra.split(/\s+/);
@@ -13,24 +13,38 @@ export const merge = (base: string, extra?: string) => {
   return [...kept, ...ex].join(' ');
 };
 
+/** Cores de cada "tom" usado nos cartões. */
+export const TONES = { brand: '#7c5cff', good: '#10b981', bad: '#f43f5e', warn: '#f59e0b', info: '#3b82f6', pink: '#d946ef', cyan: '#06b6d4' } as const;
+export type Tone = keyof typeof TONES;
+const toneVar = (t: Tone | string) => ({ '--tone': (TONES as Record<string, string>)[t] ?? t } as CSSProperties);
+
+/** Mesmo ícone, maior — para a "marca d'água" dos cartões. */
+const big = (icon: ReactNode, size = 96) => (isValidElement(icon) ? cloneElement(icon as ReactElement<any>, { size, strokeWidth: 1.6, className: '' }) : icon);
+
 const canHover = () => typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Inclina o elemento em 3D seguindo o mouse, com um reflexo de luz. No celular fica parado. */
-export function Tilt({ children, className, max = 8, as: Tag = 'div', ...rest }: { children: ReactNode; className?: string; max?: number; as?: 'div' | 'section' | 'button' | 'a'; onClick?: () => void; href?: string }) {
+/** Inclina o elemento em 3D seguindo o mouse, com reflexo de luz. No celular fica parado. */
+export function Tilt({ children, className, style, max = 7, as: Tag = 'div', ...rest }: { children: ReactNode; className?: string; style?: CSSProperties; max?: number; as?: 'div' | 'section' | 'button' | 'a'; onClick?: () => void; href?: string; type?: 'button' }) {
   const ref = useRef<HTMLElement>(null);
+  const frame = useRef(0);
   const move = (e: RPointerEvent<HTMLElement>) => {
-    if (!ref.current || !canHover()) return;
-    const r = ref.current.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width; const y = (e.clientY - r.top) / r.height;
-    ref.current.style.setProperty('--ry', `${(x - 0.5) * max * 2}deg`);
-    ref.current.style.setProperty('--rx', `${(0.5 - y) * max * 2}deg`);
-    ref.current.style.setProperty('--mx', `${x * 100}%`);
-    ref.current.style.setProperty('--my', `${y * 100}%`);
+    const el = ref.current;
+    if (!el || !canHover()) return;
+    const { clientX, clientY } = e;
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      const r = el.getBoundingClientRect();
+      const x = (clientX - r.left) / r.width; const y = (clientY - r.top) / r.height;
+      el.style.setProperty('--ry', `${(x - 0.5) * max * 2}deg`);
+      el.style.setProperty('--rx', `${(0.5 - y) * max * 2}deg`);
+      el.style.setProperty('--mx', `${x * 100}%`);
+      el.style.setProperty('--my', `${y * 100}%`);
+    });
   };
-  const leave = () => { ref.current?.style.setProperty('--rx', '0deg'); ref.current?.style.setProperty('--ry', '0deg'); };
+  const leave = () => { cancelAnimationFrame(frame.current); ref.current?.style.setProperty('--rx', '0deg'); ref.current?.style.setProperty('--ry', '0deg'); };
   const T = Tag as any;
   return (
-    <T ref={ref} onPointerMove={move} onPointerLeave={leave} className={cx('tilt', className)} {...rest}>
+    <T ref={ref} onPointerMove={move} onPointerLeave={leave} className={cx('tilt group', className)} style={style} {...rest}>
       {children}
       <span className="glare" aria-hidden="true" />
     </T>
@@ -38,14 +52,14 @@ export function Tilt({ children, className, max = 8, as: Tag = 'div', ...rest }:
 }
 
 /** Número que "conta" até o valor final. */
-export function useCountUp(value: number, duration = 900) {
+export function useCountUp(value: number, duration = 1000) {
   const [shown, setShown] = useState(value);
   const from = useRef(0);
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setShown(value); return; }
     const start = performance.now(); const a = from.current; let raf = 0;
     const tick = (t: number) => {
-      const k = Math.min(1, (t - start) / duration); const e = 1 - Math.pow(1 - k, 3);
+      const k = Math.min(1, (t - start) / duration); const e = 1 - Math.pow(1 - k, 4);
       setShown(a + (value - a) * e);
       if (k < 1) raf = requestAnimationFrame(tick); else from.current = value;
     };
@@ -60,27 +74,24 @@ export function Money({ value, className }: { value: number; className?: string 
   return <span className={cx('tabular-nums', className)}>{formatBRL(Math.round(v * 100) / 100)}</span>;
 }
 
-const CHIP = {
-  brand: 'from-brand-500 to-fuchsia-500 shadow-brand-500/40',
-  good: 'from-emerald-400 to-teal-500 shadow-emerald-500/40',
-  bad: 'from-rose-500 to-orange-500 shadow-rose-500/40',
-  warn: 'from-amber-400 to-orange-500 shadow-amber-500/40',
-  info: 'from-sky-400 to-indigo-500 shadow-sky-500/40',
-} as const;
-export type ChipTone = keyof typeof CHIP;
-
-/** Ícone dentro de uma "pastilha" com gradiente. */
-export function IconChip({ children, tone = 'brand', size = 'md' }: { children: ReactNode; tone?: ChipTone; size?: 'sm' | 'md' | 'lg' }) {
-  const s = { sm: 'h-8 w-8 rounded-lg', md: 'h-10 w-10 rounded-xl', lg: 'h-14 w-14 rounded-2xl' }[size];
-  return <span className={cx('inline-flex shrink-0 items-center justify-center bg-gradient-to-br text-white shadow-lg', s, CHIP[tone])}>{children}</span>;
+export type ChipTone = Tone;
+/** Ícone dentro de uma "pastilha" colorida. */
+export function IconChip({ children, tone = 'brand', size = 'md', solid = true }: { children: ReactNode; tone?: Tone | string; size?: 'sm' | 'md' | 'lg'; solid?: boolean }) {
+  const s = { sm: 'h-8 w-8 rounded-[10px]', md: 'h-11 w-11 rounded-2xl', lg: 'h-14 w-14 rounded-[1.25rem]' }[size];
+  return (
+    <span style={toneVar(tone)} className={cx('inline-flex shrink-0 items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6', s,
+      solid ? 'solid' : 'bg-[color-mix(in_srgb,var(--tone)_14%,transparent)] text-[var(--tone)] ring-1 ring-[color-mix(in_srgb,var(--tone)_25%,transparent)]')}>
+      {children}
+    </span>
+  );
 }
 
-export function Card({ children, className, title, action }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode }) {
+export function Card({ children, className, title, action, hover }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode; hover?: boolean }) {
   return (
-    <section className={cx('glass rounded-3xl p-4 md:p-5', className)}>
+    <section className={cx('surface rounded-[1.75rem] p-5 md:rounded-[2rem] md:p-6', hover && 'surface-hover', className)}>
       {(title || action) && (
-        <header className="mb-3 flex items-center justify-between gap-2">
-          {title && <h3 className="text-sm font-bold tracking-tight text-white">{title}</h3>}
+        <header className="mb-4 flex items-center justify-between gap-2">
+          {title && <h3 className="label flex items-center gap-2 text-slate-400">{title}</h3>}
           {action}
         </header>
       )}
@@ -92,29 +103,29 @@ export function Card({ children, className, title, action }: { children: ReactNo
 type BtnVariant = 'primary' | 'ghost' | 'danger' | 'soft';
 export function Button({ variant = 'primary', className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant }) {
   const v = {
-    primary: 'bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white shadow-lg shadow-brand-500/30 hover:brightness-110 hover:shadow-brand-500/50',
-    soft: 'bg-white/[.06] text-slate-100 ring-1 ring-white/10 hover:bg-white/10',
-    ghost: 'text-slate-400 hover:text-white hover:bg-white/5',
-    danger: 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20',
+    primary: 'btn-shine bg-gradient-to-br from-brand-400 via-brand-500 to-brand-600 text-white shadow-[0_10px_30px_-10px] shadow-brand-500/70 hover:shadow-brand-500 hover:brightness-110',
+    soft: 'bg-white/[.05] text-slate-100 ring-1 ring-inset ring-white/10 hover:bg-white/10',
+    ghost: 'text-slate-400 hover:bg-white/5 hover:text-white',
+    danger: 'bg-rose-500/10 text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20',
   }[variant];
-  return <button {...p} className={cx('inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition duration-200 active:scale-[.97] disabled:opacity-50', v, className)} />;
+  return <button {...p} className={cx('press inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 text-[12px] font-extrabold uppercase tracking-[.08em] disabled:opacity-50', v, className)} />;
 }
 
 export function IconButton({ label, className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
-  return <button aria-label={label} title={label} {...p} className={cx('inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/5 hover:text-white', className)} />;
+  return <button aria-label={label} title={label} {...p} className={cx('press inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[.04] text-slate-400 ring-1 ring-inset ring-white/5 hover:bg-white/10 hover:text-white', className)} />;
 }
 
 export function Field({ label, children, hint, className }: { label: string; children: ReactNode; hint?: ReactNode; className?: string }) {
   return (
-    <label className={cx('block space-y-1.5', className)}>
-      <span className="text-xs font-medium text-slate-400">{label}</span>
+    <label className={cx('block space-y-2', className)}>
+      <span className="label block text-slate-500">{label}</span>
       {children}
       {hint && <span className="block text-[11px] text-slate-500">{hint}</span>}
     </label>
   );
 }
 
-const inputCls = 'w-full min-h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-500/15';
+const inputCls = 'w-full min-h-12 rounded-2xl border border-white/[.07] bg-[#08070f] px-4 text-sm font-semibold text-white outline-none transition duration-300 placeholder:font-medium placeholder:text-slate-600 hover:border-white/15 focus:border-brand-400/70 focus:ring-4 focus:ring-brand-500/15';
 
 export function Input(p: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...p} className={merge(inputCls, p.className)} />;
@@ -122,9 +133,12 @@ export function Input(p: InputHTMLAttributes<HTMLInputElement>) {
 
 export function Select({ options, ...p }: SelectHTMLAttributes<HTMLSelectElement> & { options: Array<string | { value: string; label: string }> }) {
   return (
-    <select {...p} className={merge(`${inputCls} appearance-none`, p.className)}>
-      {options.map((o) => (typeof o === 'string' ? <option key={o} value={o}>{o}</option> : <option key={o.value} value={o.value}>{o.label}</option>))}
-    </select>
+    <div className="relative">
+      <select {...p} className={merge(`${inputCls} appearance-none pr-10`, p.className)}>
+        {options.map((o) => (typeof o === 'string' ? <option key={o} value={o}>{o}</option> : <option key={o.value} value={o.value}>{o.label}</option>))}
+      </select>
+      <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-slate-500" />
+    </div>
   );
 }
 
@@ -175,11 +189,11 @@ export function NumberInput({ value, onChange, suffix, step, className, placehol
 export function Segmented<T extends string>({ value, onChange, options, className }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: ReactNode }>; className?: string }) {
   const i = Math.max(0, options.findIndex((o) => o.value === value));
   return (
-    <div className={cx('relative grid auto-cols-fr grid-flow-col rounded-2xl bg-black/30 p-1 ring-1 ring-white/10', className)}>
-      <span aria-hidden="true" className="absolute bottom-1 left-1 top-1 rounded-xl bg-gradient-to-r from-brand-500/90 to-fuchsia-500/80 shadow-lg shadow-brand-500/30 transition-transform duration-300 ease-out"
+    <div className={cx('relative grid auto-cols-fr grid-flow-col rounded-2xl bg-[#08070f] p-1 ring-1 ring-inset ring-white/[.07]', className)}>
+      <span aria-hidden="true" className="absolute bottom-1 left-1 top-1 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-[0_6px_20px_-6px] shadow-brand-500 transition-transform duration-500 ease-[var(--ease-spring)]"
         style={{ width: `calc((100% - .5rem) / ${options.length})`, transform: `translateX(${i * 100}%)` }} />
       {options.map((o) => (
-        <button key={o.value} type="button" onClick={() => onChange(o.value)} className={cx('relative z-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition-colors duration-300', value === o.value ? 'text-white' : 'text-slate-400 hover:text-slate-200')}>
+        <button key={o.value} type="button" onClick={() => onChange(o.value)} className={cx('relative z-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] transition-colors duration-300', value === o.value ? 'text-white' : 'text-slate-500 hover:text-slate-200')}>
           {o.label}
         </button>
       ))}
@@ -197,79 +211,145 @@ export function Modal({ open, onClose, title, children, footer }: { open: boolea
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-md animate-fade md:items-center md:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="glass-strong animate-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2rem] shadow-2xl shadow-black/60 md:max-w-lg md:rounded-[2rem]">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-brand-500/20 to-transparent" />
-        <div aria-hidden="true" className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-white/20 md:hidden" />
-        <header className="relative flex items-center justify-between px-5 py-4">
-          <h2 className="text-lg font-bold tracking-tight text-white">{title}</h2>
-          <IconButton label="Fechar" onClick={onClose} className="bg-white/5"><X size={20} /></IconButton>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm animate-fade md:items-center md:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="surface animate-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2.25rem] md:max-w-lg md:rounded-[2.25rem]">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(80%_100%_at_50%_0%,rgba(124,92,255,.22),transparent)]" />
+        <div aria-hidden="true" className="mx-auto mt-2.5 h-1.5 w-12 rounded-full bg-white/15 md:hidden" />
+        <header className="relative flex items-center justify-between px-6 pb-3 pt-5">
+          <h2 className="font-display text-xl font-black tracking-tight text-white">{title}</h2>
+          <IconButton label="Fechar" onClick={onClose} className="rounded-full"><X size={18} /></IconButton>
         </header>
-        <div className="relative flex-1 overflow-y-auto px-5 pb-4">{children}</div>
-        {footer && <footer className="relative border-t border-white/10 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</footer>}
+        <div className="relative flex-1 overflow-y-auto px-6 pb-5">{children}</div>
+        {footer && <footer className="relative border-t border-white/[.06] px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</footer>}
       </div>
     </div>
   );
 }
 
-const TONE_TEXT = { default: 'text-white', good: 'text-emerald-300', bad: 'text-rose-300', warn: 'text-amber-300' };
-const TONE_CHIP: Record<keyof typeof TONE_TEXT, ChipTone> = { default: 'brand', good: 'good', bad: 'bad', warn: 'warn' };
+type StatTone = 'default' | 'good' | 'bad' | 'warn' | Tone;
+const STAT_TONE: Record<string, Tone> = { default: 'brand', good: 'good', bad: 'bad', warn: 'warn' };
+const TONE_TEXT: Record<Tone, string> = { brand: 'text-brand-300', good: 'text-emerald-400', bad: 'text-rose-400', warn: 'text-amber-400', info: 'text-sky-400', pink: 'text-fuchsia-400', cyan: 'text-cyan-400' };
 
-/** Cartão de número. Passe `money` (número) para animar o valor, ou `value` pronto. */
-export function Stat({ label, value, money, tone = 'default', sub, icon }: { label: string; value?: ReactNode; money?: number; tone?: 'default' | 'good' | 'bad' | 'warn'; sub?: ReactNode; icon?: ReactNode }) {
+/** Cartão de número colorido por tipo, com ícone grande ao fundo. Passe `money` para animar. */
+export function Stat({ label, value, money, tone = 'default', sub, icon }: { label: string; value?: ReactNode; money?: number; tone?: StatTone; sub?: ReactNode; icon?: ReactNode }) {
+  const t = STAT_TONE[tone] ?? (tone as Tone);
   return (
-    <Tilt className="glass rounded-3xl p-4">
-      <div className="pop flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-slate-400">{label}</span>
-        {icon && <IconChip tone={TONE_CHIP[tone]} size="sm">{icon}</IconChip>}
-      </div>
-      <div className={cx('pop mt-2 truncate text-lg font-extrabold tracking-tight md:text-2xl', TONE_TEXT[tone])}>{money !== undefined ? <Money value={money} /> : value}</div>
-      {sub && <div className="mt-1 text-[11px] text-slate-500">{sub}</div>}
+    <Tilt className="tinted rounded-[1.75rem] p-4 sm:p-5" style={toneVar(t)}>
+      {icon && <span className={cx('watermark', TONE_TEXT[t])}>{big(icon)}</span>}
+      <p className={cx('label pop-sm relative', TONE_TEXT[t])}>{label}</p>
+      <div className="pop relative mt-2 truncate font-display text-[1.3rem] font-black tracking-tight text-white sm:text-2xl md:text-[1.75rem]">{money !== undefined ? <Money value={money} /> : value}</div>
+      {sub && <div className="pop-sm relative mt-1.5 text-[11px] font-medium text-slate-400">{sub}</div>}
     </Tilt>
+  );
+}
+
+/** Bloco grande e vibrante para os números mais importantes. */
+export function BigTile({ label, money, value, tone, icon, sub }: { label: string; money?: number; value?: ReactNode; tone: Tone; icon?: ReactNode; sub?: ReactNode }) {
+  return (
+    <Tilt max={9} className="solid shine rounded-[2rem] px-5 py-7 text-center" style={toneVar(tone)}>
+      {icon && <span className="watermark !opacity-20 text-white">{big(icon, 110)}</span>}
+      <p className="label pop-sm relative text-white/75">{label}</p>
+      <div className="pop relative mt-2 font-display text-[2rem] font-black leading-none tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,.25)] md:text-[2.4rem]">{money !== undefined ? <Money value={money} /> : value}</div>
+      {sub && <p className="pop-sm relative mt-2 text-xs font-semibold text-white/80">{sub}</p>}
+    </Tilt>
+  );
+}
+
+/** Mini cartão centralizado (rótulo + número). */
+export function MiniStat({ label, value, money, sub, tone }: { label: string; value?: ReactNode; money?: number; sub?: ReactNode; tone?: Tone }) {
+  return (
+    <div className="surface surface-hover rounded-[1.5rem] px-3 py-4 text-center">
+      <p className={cx('label', tone ? TONE_TEXT[tone] : 'text-slate-500')}>{label}</p>
+      <div className="mt-1.5 truncate font-display text-lg font-black text-white md:text-xl">{money !== undefined ? <Money value={money} /> : value}</div>
+      {sub && <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500">{sub}</p>}
+    </div>
+  );
+}
+
+/** Item de lista em formato de cartão. */
+export function Row({ icon, tone = 'brand', title, subtitle, amount, amountTone, actions, onClick, muted, leading }: {
+  icon?: ReactNode; tone?: Tone | string; title: ReactNode; subtitle?: ReactNode; amount?: ReactNode; amountTone?: 'good' | 'bad' | 'muted';
+  actions?: ReactNode; onClick?: () => void; muted?: boolean; leading?: ReactNode;
+}) {
+  return (
+    <li className={cx('group surface surface-hover flex items-center gap-3 rounded-[1.4rem] p-3 pr-3.5 md:gap-4 md:p-3.5', muted && 'opacity-45')}>
+      {leading}
+      {icon && <IconChip tone={tone} solid={false}>{icon}</IconChip>}
+      <button type="button" disabled={!onClick} onClick={onClick} className="min-w-0 flex-1 text-left disabled:cursor-default">
+        <p className={cx('truncate font-display text-[15px] font-extrabold text-white', muted && 'line-through decoration-2')}>{title}</p>
+        {subtitle && <p className="label mt-1 truncate !tracking-[.12em] text-slate-500">{subtitle}</p>}
+      </button>
+      {amount !== undefined && <span className={cx('whitespace-nowrap font-mono text-sm font-extrabold', amountTone === 'good' ? 'text-emerald-400' : amountTone === 'bad' ? 'text-rose-400' : 'text-slate-200')}>{amount}</span>}
+      {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
+    </li>
+  );
+}
+
+/** Cartão tracejado para "adicionar novo". */
+export function AddCard({ label, onClick, className }: { label: string; onClick: () => void; className?: string }) {
+  return (
+    <button type="button" onClick={onClick} className={cx('press group flex min-h-40 flex-col items-center justify-center gap-3 rounded-[2rem] border-2 border-dashed border-white/10 text-slate-500 transition hover:border-brand-400/50 hover:bg-brand-500/[.04] hover:text-brand-300', className)}>
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[.04] ring-1 ring-white/10 transition duration-500 group-hover:rotate-90 group-hover:bg-brand-500/20"><Plus size={22} /></span>
+      <span className="label">{label}</span>
+    </button>
+  );
+}
+
+/** Caixa de seleção animada. */
+export function Check({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+  return (
+    <button type="button" role="checkbox" aria-checked={checked} aria-label={label} onClick={onChange}
+      className={cx('press flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ring-1 ring-inset transition-colors duration-300', checked ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 ring-emerald-300/40 shadow-[0_6px_16px_-6px] shadow-emerald-500' : 'bg-[#08070f] ring-white/15 hover:ring-white/30')}>
+      {checked && <CheckIcon size={17} strokeWidth={3.5} className="pop-in text-white" />}
+    </button>
   );
 }
 
 export function PeriodNav({ label, onPrev, onNext, onToday }: { label: string; onPrev: () => void; onNext: () => void; onToday?: () => void }) {
   return (
-    <div className="glass flex items-center gap-1 rounded-2xl p-1">
-      <IconButton label="Anterior" onClick={onPrev}><ChevronLeft size={18} /></IconButton>
-      <button type="button" key={label} onClick={onToday} className="animate-fade min-w-36 flex-1 text-center text-sm font-bold text-white" title="Voltar para hoje">{label}</button>
-      <IconButton label="Próximo" onClick={onNext}><ChevronRight size={18} /></IconButton>
+    <div className="surface flex items-center gap-1 rounded-2xl p-1">
+      <IconButton label="Anterior" onClick={onPrev} className="h-9 w-9 bg-transparent ring-0"><ChevronLeft size={17} /></IconButton>
+      <button type="button" key={label} onClick={onToday} className="label animate-fade min-w-40 flex-1 text-center !text-[11px] text-white" title="Voltar para hoje">{label}</button>
+      <IconButton label="Próximo" onClick={onNext} className="h-9 w-9 bg-transparent ring-0"><ChevronRight size={17} /></IconButton>
     </div>
   );
 }
 
-export function Progress({ value, tone = 'good' }: { value: number; tone?: 'good' | 'warn' | 'bad' }) {
-  const c = { good: 'from-emerald-400 via-teal-400 to-cyan-400 shadow-emerald-400/50', warn: 'from-amber-400 to-orange-500 shadow-amber-400/50', bad: 'from-rose-500 to-pink-500 shadow-rose-500/50' }[tone];
+export function Progress({ value, tone = 'good' }: { value: number; tone?: 'good' | 'warn' | 'bad' | 'brand' }) {
+  const c = { good: 'from-emerald-400 to-emerald-500 shadow-emerald-400/60', warn: 'from-amber-300 to-orange-500 shadow-amber-400/60', bad: 'from-rose-400 to-rose-600 shadow-rose-500/60', brand: 'from-brand-400 to-fuchsia-500 shadow-brand-400/60' }[tone];
+  const pct = Math.max(0, Math.min(100, value));
   return (
-    <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/[.06] ring-1 ring-inset ring-white/5">
-      <div className={cx('fill-x h-full rounded-full bg-gradient-to-r shadow-[0_0_12px] transition-[width] duration-700', c)} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+    <div className="h-3 w-full overflow-hidden rounded-full bg-white/[.05] p-0.5 ring-1 ring-inset ring-white/5">
+      <div className={cx('fill-x relative h-full overflow-hidden rounded-full bg-gradient-to-r shadow-[0_0_14px]', c)} style={{ width: `${pct}%` }}>
+        <span className="progress-shimmer absolute inset-0" />
+      </div>
     </div>
   );
 }
 
 export function Empty({ icon, title, text, action }: { icon?: ReactNode; title: string; text?: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+    <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
       {icon && (
-        <div className="relative mb-2">
-          <div aria-hidden="true" className="absolute inset-0 scale-150 rounded-full bg-brand-500/30 blur-2xl" />
-          <div className="float relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-fuchsia-500 text-white shadow-xl shadow-brand-500/40">{icon}</div>
+        <div className="relative mb-3">
+          <div aria-hidden="true" className="absolute inset-0 scale-[1.8] rounded-full bg-brand-500/25 blur-2xl" />
+          <div className="float solid relative flex h-16 w-16 items-center justify-center rounded-[1.4rem]" style={toneVar('brand')}>{icon}</div>
         </div>
       )}
-      <p className="text-sm font-bold text-white">{title}</p>
-      {text && <p className="max-w-xs text-xs text-slate-400">{text}</p>}
+      <p className="font-display text-lg font-black text-white">{title}</p>
+      {text && <p className="max-w-xs text-xs leading-relaxed text-slate-400">{text}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+export function PageHeader({ title, subtitle, actions, eyebrow }: { title: string; subtitle?: string; actions?: ReactNode; eyebrow?: string }) {
   return (
-    <div className="mb-5 flex flex-col gap-3 md:mb-7 md:flex-row md:items-end md:justify-between">
+    <div className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-end md:justify-between">
       <div>
-        <h1 className="text-gradient text-2xl font-extrabold tracking-tight md:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-slate-400">{subtitle}</p>}
+        {eyebrow && <p className="label mb-1.5 text-brand-300">{eyebrow}</p>}
+        <h1 className="font-display text-3xl font-black tracking-tight text-white md:text-4xl">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm font-medium text-slate-400">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2 max-md:[&>*]:min-w-full">{actions}</div>}
     </div>
@@ -281,10 +361,10 @@ export function ConfirmDelete({ onConfirm, label = 'Excluir' }: { onConfirm: () 
   const [armed, setArmed] = useState(false);
   useEffect(() => { if (!armed) return; const t = setTimeout(() => setArmed(false), 3000); return () => clearTimeout(t); }, [armed]);
   return armed ? (
-    <button type="button" onClick={onConfirm} className="h-10 rounded-xl bg-rose-500 px-3 text-xs font-semibold text-white">Confirmar?</button>
+    <button type="button" onClick={onConfirm} className="press pop-in h-10 rounded-xl bg-rose-500 px-3 text-[11px] font-extrabold uppercase tracking-wider text-white shadow-[0_6px_18px_-6px] shadow-rose-500">Confirmar</button>
   ) : (
-    <IconButton label={label} onClick={() => setArmed(true)} className="hover:text-rose-400">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
+    <IconButton label={label} onClick={() => setArmed(true)} className="bg-rose-500/[.08] text-rose-400 ring-rose-500/15 hover:bg-rose-500/20 hover:text-rose-300">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
     </IconButton>
   );
 }
