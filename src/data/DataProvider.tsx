@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { COLLECTIONS, getAll, newId, requestPersistence, write, type CollectionKey, type Collections } from './db';
+import { COLLECTIONS, getAll, getEngine, newId, requestPersistence, write, type CollectionKey, type Collections, type Engine } from './db';
 import { useToast } from './toast';
 
 type Store = { [K in CollectionKey]: Collections[K][] };
@@ -19,6 +19,7 @@ interface DataApi {
   data: Store;
   loading: boolean;
   persisted: boolean;
+  engine: Engine | null;
   insert: <K extends CollectionKey>(k: K, items: Partial<Collections[K]> | Partial<Collections[K]>[]) => Promise<Collections[K][] | null>;
   update: <K extends CollectionKey>(k: K, id: string, patch: Partial<Collections[K]>) => Promise<boolean>;
   remove: <K extends CollectionKey>(k: K, id: string) => Promise<boolean>;
@@ -33,6 +34,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Store>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [persisted, setPersisted] = useState(false);
+  const [engine, setEngine] = useState<Engine | null>(null);
 
   const load = useCallback(async () => {
     const entries = await Promise.all(COLLECTIONS.map(async (c) => [c, (await getAll(c)).sort(SORT[c])] as const));
@@ -42,6 +44,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     load().catch((e) => { console.error(e); toast('Não foi possível abrir o banco local deste navegador.', 'error'); }).finally(() => setLoading(false));
     requestPersistence().then(setPersisted);
+    getEngine().then((e) => {
+      setEngine(e);
+      if (e === 'memory') toast('Este navegador não deixa o app guardar dados: o que você lançar some ao fechar. Abra o link no Chrome ou Safari.', 'error');
+    });
     // Mantém outras abas abertas atualizadas.
     const onMsg = () => load();
     channel?.addEventListener('message', onMsg);
@@ -92,7 +98,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return commit({ clear: [...COLLECTIONS], put });
   }, [commit]);
 
-  const api = useMemo(() => ({ data, loading, persisted, insert, update, remove, replaceAll }), [data, loading, persisted, insert, update, remove, replaceAll]);
+  const api = useMemo(() => ({ data, loading, persisted, engine, insert, update, remove, replaceAll }), [data, loading, persisted, engine, insert, update, remove, replaceAll]);
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }
 

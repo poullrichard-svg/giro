@@ -12,7 +12,7 @@ import { daysUntil, formatDate, localISODate } from '../lib/format';
 const readLastBackup = () => { try { return localStorage.getItem(BACKUP_KEY); } catch { return null; } };
 
 export default function More() {
-  const { data, persisted, insert, replaceAll } = useData();
+  const { data, persisted, engine, insert, replaceAll } = useData();
   const toast = useToast();
   const [lastBackup, setLastBackup] = useState(readLastBackup);
   const [confirmErase, setConfirmErase] = useState(false);
@@ -57,6 +57,7 @@ export default function More() {
       <Card title={<span className="flex items-center gap-2"><HardDrive size={16} /> Onde ficam seus dados</span>}>
         <p className="text-sm text-slate-400">Tudo fica salvo <strong className="text-slate-200">neste aparelho e neste navegador</strong> — sem servidor, sem login e funciona sem internet. São {total} registros guardados.</p>
         <ul className="mt-3 space-y-1.5 text-xs text-slate-400">
+          <li>{engine === 'idb' ? '✅ Banco do navegador funcionando.' : engine === 'local' ? '⚠️ Usando armazenamento alternativo (o banco principal do navegador está bloqueado). Funciona, mas tem menos espaço — se puder, abra no Chrome ou Safari.' : engine === 'memory' ? '❌ Este navegador não deixa guardar dados: tudo some ao fechar. Abra o link no Chrome ou Safari (não dentro do WhatsApp/Instagram).' : 'Verificando armazenamento…'}</li>
           <li>{persisted ? '✅ Armazenamento protegido: o navegador não apaga os dados para liberar espaço.' : '⚠️ O navegador pode limpar os dados se faltar espaço. Instale o app na tela inicial para proteger.'}</li>
           <li>⚠️ Limpar os dados do navegador ou desinstalar o app apaga tudo — faça backup com frequência.</li>
           <li>⚠️ Celular e computador ainda não sincronizam entre si. Para passar os dados de um para o outro, use backup → restaurar.</li>

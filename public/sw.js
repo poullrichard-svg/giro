@@ -1,5 +1,5 @@
 // Service worker mínimo: permite instalar o app e abre o shell offline.
-const CACHE = 'giro-v1';
+const CACHE = 'giro-v2';
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/icon.svg', '/manifest.webmanifest'])));
   self.skipWaiting();

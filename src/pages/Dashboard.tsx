@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowDown, ArrowDownCircle, ArrowUp, ArrowUpCircle, BarChart3, Bell, Car, CalendarClock, PieChart, Sparkles, Wallet } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useQuickAdd } from '../components/Shell';
+import { useToast } from '../data/toast';
+import { parseQuickEntry } from '../lib/quickParse';
 import { Card, Empty, Money, PeriodNav, Row, Stat, Tilt } from '../components/ui';
 import { Bars, Donut } from '../components/charts';
 import { colorFor } from '../lib/categories';
@@ -10,8 +12,9 @@ import { addMonths, currentMonth, elapsedDays, formatBRL, formatDate, localISODa
 import { categoryBreakdown, driverStats, fixedBillAlerts, lastMonthsSeries, monthTotals, vehicleAlerts } from '../lib/stats';
 
 export default function Dashboard() {
-  const { data } = useData();
+  const { data, insert } = useData();
   const quickAdd = useQuickAdd();
+  const toast = useToast();
   const [month, setMonth] = useState(currentMonth());
   const [quick, setQuick] = useState('');
 
@@ -62,13 +65,17 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="pop-sm grid grid-cols-2 gap-3">
-            <div className="rounded-[1.4rem] bg-white/15 p-4 ring-1 ring-white/25">
-              <p className="label flex items-center gap-1.5 text-white/80"><ArrowUp size={13} strokeWidth={3} /> Entrou</p>
-              <Money value={totals.income} className="mt-1.5 block font-display text-xl font-black" />
+            <div className="rounded-[1.4rem] bg-emerald-950/45 p-4 ring-1 ring-emerald-200/40">
+              <p className="label flex items-center gap-2 text-emerald-100">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-emerald-950 shadow-[0_0_12px] shadow-emerald-300/70"><ArrowUp size={14} strokeWidth={3.2} /></span> Entrou
+              </p>
+              <Money value={totals.income} className="mt-2 block font-display text-xl font-black text-white" />
             </div>
-            <div className="rounded-[1.4rem] bg-black/15 p-4 ring-1 ring-white/20">
-              <p className="label flex items-center gap-1.5 text-white/80"><ArrowDown size={13} strokeWidth={3} /> Saiu</p>
-              <Money value={totals.expense} className="mt-1.5 block font-display text-xl font-black" />
+            <div className="rounded-[1.4rem] bg-rose-600/80 p-4 ring-1 ring-rose-200/50 shadow-[0_10px_24px_-10px] shadow-rose-900">
+              <p className="label flex items-center gap-2 text-rose-50">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-rose-600 shadow-[0_0_12px] shadow-rose-200/70"><ArrowDown size={14} strokeWidth={3.2} /></span> Saiu
+              </p>
+              <Money value={totals.expense} className="mt-2 block font-display text-xl font-black text-white" />
             </div>
           </div>
         </div>
@@ -81,7 +88,17 @@ export default function Dashboard() {
         <Stat label="Lucro motorista" money={driver.netProfit} tone={driver.netProfit >= 0 ? 'info' : 'bad'} icon={<Car />} sub={`${formatBRL(driver.gross)} bruto · ${driver.daysWorked} ${driver.daysWorked === 1 ? 'dia' : 'dias'}`} />
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); quickAdd({ text: quick }); setQuick(''); }} className="surface group flex items-center gap-3 rounded-[1.75rem] p-2 pl-5 transition duration-300 focus-within:border-brand-400/50 focus-within:ring-4 focus-within:ring-brand-500/15">
+      <form onSubmit={async (e) => {
+        e.preventDefault();
+        const p = parseQuickEntry(quick);
+        // Sem valor reconhecido: abre o formulário para completar.
+        if (!p) { quickAdd({ text: quick }); setQuick(''); return; }
+        const saved = await insert('transactions', { ...p, vehicleId: null });
+        if (saved) {
+          setQuick('');
+          toast(`${p.type === 'income' ? 'Receita' : 'Despesa'} de ${formatBRL(p.amount)} lançada · ${p.category}`, 'ok', { label: 'Editar', onClick: () => quickAdd({ editing: saved[0] }) });
+        }
+      }} className="surface group flex items-center gap-3 rounded-[1.75rem] p-2 pl-5 transition duration-300 focus-within:border-brand-400/50 focus-within:ring-4 focus-within:ring-brand-500/15">
         <Sparkles size={20} className="shrink-0 text-brand-300 transition duration-500 group-focus-within:rotate-[20deg] group-focus-within:scale-125" />
         <input value={quick} onChange={(e) => setQuick(e.target.value)} placeholder='Lançar rápido: "gastei 45 mercado no débito"' className="min-h-12 min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-slate-500" />
         <button type="submit" className="press btn-shine rounded-[1.2rem] bg-gradient-to-br from-brand-500 to-brand-700 px-5 py-3.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-white shadow-[0_8px_24px_-8px] shadow-brand-500">Lançar</button>
