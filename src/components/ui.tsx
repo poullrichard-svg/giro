@@ -1,4 +1,4 @@
-import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type PointerEvent as RPointerEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { formatBRL } from '../lib/format';
 
@@ -13,12 +13,74 @@ export const merge = (base: string, extra?: string) => {
   return [...kept, ...ex].join(' ');
 };
 
+const canHover = () => typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Inclina o elemento em 3D seguindo o mouse, com um reflexo de luz. No celular fica parado. */
+export function Tilt({ children, className, max = 8, as: Tag = 'div', ...rest }: { children: ReactNode; className?: string; max?: number; as?: 'div' | 'section' | 'button' | 'a'; onClick?: () => void; href?: string }) {
+  const ref = useRef<HTMLElement>(null);
+  const move = (e: RPointerEvent<HTMLElement>) => {
+    if (!ref.current || !canHover()) return;
+    const r = ref.current.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width; const y = (e.clientY - r.top) / r.height;
+    ref.current.style.setProperty('--ry', `${(x - 0.5) * max * 2}deg`);
+    ref.current.style.setProperty('--rx', `${(0.5 - y) * max * 2}deg`);
+    ref.current.style.setProperty('--mx', `${x * 100}%`);
+    ref.current.style.setProperty('--my', `${y * 100}%`);
+  };
+  const leave = () => { ref.current?.style.setProperty('--rx', '0deg'); ref.current?.style.setProperty('--ry', '0deg'); };
+  const T = Tag as any;
+  return (
+    <T ref={ref} onPointerMove={move} onPointerLeave={leave} className={cx('tilt', className)} {...rest}>
+      {children}
+      <span className="glare" aria-hidden="true" />
+    </T>
+  );
+}
+
+/** Número que "conta" até o valor final. */
+export function useCountUp(value: number, duration = 900) {
+  const [shown, setShown] = useState(value);
+  const from = useRef(0);
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setShown(value); return; }
+    const start = performance.now(); const a = from.current; let raf = 0;
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - start) / duration); const e = 1 - Math.pow(1 - k, 3);
+      setShown(a + (value - a) * e);
+      if (k < 1) raf = requestAnimationFrame(tick); else from.current = value;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(raf); from.current = value; };
+  }, [value, duration]);
+  return shown;
+}
+
+export function Money({ value, className }: { value: number; className?: string }) {
+  const v = useCountUp(value);
+  return <span className={cx('tabular-nums', className)}>{formatBRL(Math.round(v * 100) / 100)}</span>;
+}
+
+const CHIP = {
+  brand: 'from-brand-500 to-fuchsia-500 shadow-brand-500/40',
+  good: 'from-emerald-400 to-teal-500 shadow-emerald-500/40',
+  bad: 'from-rose-500 to-orange-500 shadow-rose-500/40',
+  warn: 'from-amber-400 to-orange-500 shadow-amber-500/40',
+  info: 'from-sky-400 to-indigo-500 shadow-sky-500/40',
+} as const;
+export type ChipTone = keyof typeof CHIP;
+
+/** Ícone dentro de uma "pastilha" com gradiente. */
+export function IconChip({ children, tone = 'brand', size = 'md' }: { children: ReactNode; tone?: ChipTone; size?: 'sm' | 'md' | 'lg' }) {
+  const s = { sm: 'h-8 w-8 rounded-lg', md: 'h-10 w-10 rounded-xl', lg: 'h-14 w-14 rounded-2xl' }[size];
+  return <span className={cx('inline-flex shrink-0 items-center justify-center bg-gradient-to-br text-white shadow-lg', s, CHIP[tone])}>{children}</span>;
+}
+
 export function Card({ children, className, title, action }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode }) {
   return (
-    <section className={cx('rounded-2xl border border-white/5 bg-slate-900/60 p-4 md:p-5', className)}>
+    <section className={cx('glass rounded-3xl p-4 md:p-5', className)}>
       {(title || action) && (
         <header className="mb-3 flex items-center justify-between gap-2">
-          {title && <h3 className="text-sm font-semibold text-slate-200">{title}</h3>}
+          {title && <h3 className="text-sm font-bold tracking-tight text-white">{title}</h3>}
           {action}
         </header>
       )}
@@ -30,12 +92,12 @@ export function Card({ children, className, title, action }: { children: ReactNo
 type BtnVariant = 'primary' | 'ghost' | 'danger' | 'soft';
 export function Button({ variant = 'primary', className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant }) {
   const v = {
-    primary: 'bg-brand-500 text-white hover:bg-brand-400',
-    soft: 'bg-white/5 text-slate-200 hover:bg-white/10',
+    primary: 'bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white shadow-lg shadow-brand-500/30 hover:brightness-110 hover:shadow-brand-500/50',
+    soft: 'bg-white/[.06] text-slate-100 ring-1 ring-white/10 hover:bg-white/10',
     ghost: 'text-slate-400 hover:text-white hover:bg-white/5',
     danger: 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20',
   }[variant];
-  return <button {...p} className={cx('inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50', v, className)} />;
+  return <button {...p} className={cx('inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition duration-200 active:scale-[.97] disabled:opacity-50', v, className)} />;
 }
 
 export function IconButton({ label, className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
@@ -52,7 +114,7 @@ export function Field({ label, children, hint, className }: { label: string; chi
   );
 }
 
-const inputCls = 'w-full min-h-11 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-500/60';
+const inputCls = 'w-full min-h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-500/15';
 
 export function Input(p: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...p} className={merge(inputCls, p.className)} />;
@@ -111,10 +173,13 @@ export function NumberInput({ value, onChange, suffix, step, className, placehol
 }
 
 export function Segmented<T extends string>({ value, onChange, options, className }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: ReactNode }>; className?: string }) {
+  const i = Math.max(0, options.findIndex((o) => o.value === value));
   return (
-    <div className={cx('flex rounded-xl bg-slate-950/60 p-1 ring-1 ring-white/5', className)}>
+    <div className={cx('relative grid auto-cols-fr grid-flow-col rounded-2xl bg-black/30 p-1 ring-1 ring-white/10', className)}>
+      <span aria-hidden="true" className="absolute bottom-1 left-1 top-1 rounded-xl bg-gradient-to-r from-brand-500/90 to-fuchsia-500/80 shadow-lg shadow-brand-500/30 transition-transform duration-300 ease-out"
+        style={{ width: `calc((100% - .5rem) / ${options.length})`, transform: `translateX(${i * 100}%)` }} />
       {options.map((o) => (
-        <button key={o.value} type="button" onClick={() => onChange(o.value)} className={cx('flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition', value === o.value ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300')}>
+        <button key={o.value} type="button" onClick={() => onChange(o.value)} className={cx('relative z-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition-colors duration-300', value === o.value ? 'text-white' : 'text-slate-400 hover:text-slate-200')}>
           {o.label}
         </button>
       ))}
@@ -132,45 +197,53 @@ export function Modal({ open, onClose, title, children, footer }: { open: boolea
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm animate-fade md:items-center md:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="animate-sheet flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-white/10 bg-slate-900 md:max-w-lg md:rounded-3xl">
-        <header className="flex items-center justify-between border-b border-white/5 px-5 py-4">
-          <h2 className="text-base font-semibold text-white">{title}</h2>
-          <IconButton label="Fechar" onClick={onClose}><X size={20} /></IconButton>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-md animate-fade md:items-center md:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="glass-strong animate-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2rem] shadow-2xl shadow-black/60 md:max-w-lg md:rounded-[2rem]">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-brand-500/20 to-transparent" />
+        <div aria-hidden="true" className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-white/20 md:hidden" />
+        <header className="relative flex items-center justify-between px-5 py-4">
+          <h2 className="text-lg font-bold tracking-tight text-white">{title}</h2>
+          <IconButton label="Fechar" onClick={onClose} className="bg-white/5"><X size={20} /></IconButton>
         </header>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <footer className="border-t border-white/5 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</footer>}
+        <div className="relative flex-1 overflow-y-auto px-5 pb-4">{children}</div>
+        {footer && <footer className="relative border-t border-white/10 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</footer>}
       </div>
     </div>
   );
 }
 
-export function Stat({ label, value, tone = 'default', sub, icon }: { label: string; value: ReactNode; tone?: 'default' | 'good' | 'bad' | 'warn'; sub?: ReactNode; icon?: ReactNode }) {
-  const t = { default: 'text-white', good: 'text-emerald-400', bad: 'text-rose-400', warn: 'text-amber-400' }[tone];
+const TONE_TEXT = { default: 'text-white', good: 'text-emerald-300', bad: 'text-rose-300', warn: 'text-amber-300' };
+const TONE_CHIP: Record<keyof typeof TONE_TEXT, ChipTone> = { default: 'brand', good: 'good', bad: 'bad', warn: 'warn' };
+
+/** Cartão de número. Passe `money` (número) para animar o valor, ou `value` pronto. */
+export function Stat({ label, value, money, tone = 'default', sub, icon }: { label: string; value?: ReactNode; money?: number; tone?: 'default' | 'good' | 'bad' | 'warn'; sub?: ReactNode; icon?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-4">
-      <div className="flex items-center justify-between gap-2 text-xs text-slate-400">{label}{icon}</div>
-      <div className={cx('mt-1 truncate text-lg font-bold md:text-xl', t)}>{value}</div>
-      {sub && <div className="mt-0.5 text-[11px] text-slate-500">{sub}</div>}
-    </div>
+    <Tilt className="glass rounded-3xl p-4">
+      <div className="pop flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-slate-400">{label}</span>
+        {icon && <IconChip tone={TONE_CHIP[tone]} size="sm">{icon}</IconChip>}
+      </div>
+      <div className={cx('pop mt-2 truncate text-lg font-extrabold tracking-tight md:text-2xl', TONE_TEXT[tone])}>{money !== undefined ? <Money value={money} /> : value}</div>
+      {sub && <div className="mt-1 text-[11px] text-slate-500">{sub}</div>}
+    </Tilt>
   );
 }
 
 export function PeriodNav({ label, onPrev, onNext, onToday }: { label: string; onPrev: () => void; onNext: () => void; onToday?: () => void }) {
   return (
-    <div className="flex items-center gap-1 rounded-xl bg-slate-900/60 p-1 ring-1 ring-white/5">
+    <div className="glass flex items-center gap-1 rounded-2xl p-1">
       <IconButton label="Anterior" onClick={onPrev}><ChevronLeft size={18} /></IconButton>
-      <button type="button" onClick={onToday} className="min-w-36 flex-1 text-center text-sm font-semibold text-white" title="Voltar para hoje">{label}</button>
+      <button type="button" key={label} onClick={onToday} className="animate-fade min-w-36 flex-1 text-center text-sm font-bold text-white" title="Voltar para hoje">{label}</button>
       <IconButton label="Próximo" onClick={onNext}><ChevronRight size={18} /></IconButton>
     </div>
   );
 }
 
 export function Progress({ value, tone = 'good' }: { value: number; tone?: 'good' | 'warn' | 'bad' }) {
-  const c = { good: 'bg-emerald-500', warn: 'bg-amber-500', bad: 'bg-rose-500' }[tone];
+  const c = { good: 'from-emerald-400 via-teal-400 to-cyan-400 shadow-emerald-400/50', warn: 'from-amber-400 to-orange-500 shadow-amber-400/50', bad: 'from-rose-500 to-pink-500 shadow-rose-500/50' }[tone];
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
-      <div className={cx('h-full rounded-full transition-all', c)} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+    <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/[.06] ring-1 ring-inset ring-white/5">
+      <div className={cx('fill-x h-full rounded-full bg-gradient-to-r shadow-[0_0_12px] transition-[width] duration-700', c)} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
     </div>
   );
 }
@@ -178,20 +251,25 @@ export function Progress({ value, tone = 'good' }: { value: number; tone?: 'good
 export function Empty({ icon, title, text, action }: { icon?: ReactNode; title: string; text?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-      {icon && <div className="text-slate-600">{icon}</div>}
-      <p className="text-sm font-semibold text-slate-300">{title}</p>
-      {text && <p className="max-w-xs text-xs text-slate-500">{text}</p>}
-      {action && <div className="mt-2">{action}</div>}
+      {icon && (
+        <div className="relative mb-2">
+          <div aria-hidden="true" className="absolute inset-0 scale-150 rounded-full bg-brand-500/30 blur-2xl" />
+          <div className="float relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-fuchsia-500 text-white shadow-xl shadow-brand-500/40">{icon}</div>
+        </div>
+      )}
+      <p className="text-sm font-bold text-white">{title}</p>
+      {text && <p className="max-w-xs text-xs text-slate-400">{text}</p>}
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
-    <div className="mb-4 flex flex-col gap-3 md:mb-6 md:flex-row md:items-end md:justify-between">
+    <div className="mb-5 flex flex-col gap-3 md:mb-7 md:flex-row md:items-end md:justify-between">
       <div>
-        <h1 className="text-xl font-bold text-white md:text-2xl">{title}</h1>
-        {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+        <h1 className="text-gradient text-2xl font-extrabold tracking-tight md:text-3xl">{title}</h1>
+        {subtitle && <p className="mt-0.5 text-sm text-slate-400">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2 max-md:[&>*]:min-w-full">{actions}</div>}
     </div>

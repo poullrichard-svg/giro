@@ -59,7 +59,7 @@ export default function Financing() {
           {showTable && (
             <div className="max-h-96 overflow-auto">
               <table className="w-full text-right text-xs">
-                <thead className="sticky top-0 bg-slate-900 text-slate-500"><tr><th className="py-2 text-left">#</th><th>Parcela</th><th>Juros</th><th>Amortização</th><th>Saldo</th></tr></thead>
+                <thead className="sticky top-0 bg-[#13111f] text-slate-500"><tr><th className="py-2 text-left">#</th><th>Parcela</th><th>Juros</th><th>Amortização</th><th>Saldo</th></tr></thead>
                 <tbody className="divide-y divide-white/5">
                   {r.schedule.map((x) => <tr key={x.month}><td className="py-1.5 text-left text-slate-500">{x.month}</td><td>{formatBRL(x.installment)}</td><td className="text-rose-400/80">{formatBRL(x.interest)}</td><td>{formatBRL(x.amortization)}</td><td className="text-slate-400">{formatBRL(x.balance)}</td></tr>)}
                 </tbody>

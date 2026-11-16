@@ -32,8 +32,8 @@ export default function Shopping() {
     <div>
       <PageHeader title="Lista de compras" subtitle="Marque o que já pegou e veja o total do carrinho" />
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <Stat label="Total estimado" value={formatBRL(total)} />
-        <Stat label="No carrinho" value={formatBRL(inCart)} tone="good" sub={`${items.filter((i) => i.completed).length}/${items.length} itens`} />
+        <Stat label="Total estimado" money={total} />
+        <Stat label="No carrinho" money={inCart} tone="good" sub={`${items.filter((i) => i.completed).length}/${items.length} itens`} />
       </div>
       <form onSubmit={add} className="mb-4 grid grid-cols-[1fr_70px_80px] gap-2 md:grid-cols-[1fr_90px_90px_140px_auto]">
         <Input className="col-span-3 md:col-span-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="Adicionar item…" />

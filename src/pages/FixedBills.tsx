@@ -75,10 +75,10 @@ export default function FixedBills() {
         </>
       } />
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Despesas fixas" value={formatBRL(totalExp)} tone="bad" />
-        <Stat label="Receitas fixas" value={formatBRL(totalInc)} tone="good" />
-        <Stat label="Já pago" value={formatBRL(paidExp)} sub={`${expenses.filter((x) => paidMap.has(x.id)).length}/${expenses.length} contas`} />
-        <Stat label="Falta pagar" value={formatBRL(totalExp - paidExp)} tone="warn" />
+        <Stat label="Despesas fixas" money={totalExp} tone="bad" />
+        <Stat label="Receitas fixas" money={totalInc} tone="good" />
+        <Stat label="Já pago" money={paidExp} sub={`${expenses.filter((x) => paidMap.has(x.id)).length}/${expenses.length} contas`} />
+        <Stat label="Falta pagar" money={totalExp - paidExp} tone="warn" />
       </div>
       {totalExp > 0 && <div className="mb-4"><Progress value={(paidExp / totalExp) * 100} /></div>}
 

@@ -35,7 +35,7 @@ export function TermField({ label = 'Prazo', value, onChange, unit, onUnit }: { 
 
 export function Big({ label, value, tone = 'text-white', sub }: { label: string; value: ReactNode; tone?: string; sub?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-4">
+    <div className="glass rounded-3xl p-4">
       <p className="text-xs text-slate-400">{label}</p>
       <p className={`mt-1 text-2xl font-bold ${tone}`}>{value}</p>
       {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}

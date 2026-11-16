@@ -3,7 +3,7 @@ import { Download, Pencil, Search } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useQuickAdd } from '../components/Shell';
 import { Button, Card, ConfirmDelete, Empty, IconButton, Input, PageHeader, PeriodNav, Segmented, Select, Stat, cx } from '../components/ui';
-import { colorFor } from '../lib/categories';
+import { CategoryBadge } from '../components/CategoryBadge';
 import { addMonths, currentMonth, formatBRL, formatDayLabel, monthLabel } from '../lib/format';
 import type { Transaction } from '../types';
 import { downloadCSV } from '../lib/csv';
@@ -41,9 +41,9 @@ export default function Transactions() {
       } />
 
       <div className="mb-4 grid grid-cols-3 gap-3">
-        <Stat label="Entradas" value={formatBRL(inc)} tone="good" />
-        <Stat label="Saídas" value={formatBRL(exp)} tone="bad" />
-        <Stat label="Resultado" value={formatBRL(inc - exp)} tone={inc - exp >= 0 ? 'good' : 'bad'} sub="sem contas fixas" />
+        <Stat label="Entradas" money={inc} tone="good" />
+        <Stat label="Saídas" money={exp} tone="bad" />
+        <Stat label="Resultado" money={inc - exp} tone={inc - exp >= 0 ? 'good' : 'bad'} sub="sem contas fixas" />
       </div>
 
       <div className="mb-4 grid gap-2 md:grid-cols-[1fr_auto_200px]">
@@ -64,10 +64,10 @@ export default function Transactions() {
                   <span className="font-semibold capitalize text-slate-300">{formatDayLabel(date)}</span>
                   <span className={dayTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{formatBRL(dayTotal)}</span>
                 </div>
-                <ul className="divide-y divide-white/5">
+                <ul className="stagger divide-y divide-white/5">
                   {items.map((t) => (
                     <li key={t.id} className="flex items-center gap-3 px-4 py-2">
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorFor(t.category) }} />
+                      <CategoryBadge category={t.category} />
                       <button className="min-w-0 flex-1 text-left" onClick={() => quickAdd({ editing: t })}>
                         <p className="truncate text-sm text-slate-200">{t.description}</p>
                         <p className="text-xs text-slate-500">{t.category} · {t.paymentMethod}</p>

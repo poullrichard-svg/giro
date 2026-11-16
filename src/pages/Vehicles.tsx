@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CalendarClock, CarFront, Droplets, FileText, Gauge, Pencil, Plus, Shield, Wrench } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
-import { Button, Card, ConfirmDelete, Empty, Field, Input, Modal, MoneyInput, NumberInput, PageHeader, Progress, Segmented, Select, Stat, cx } from '../components/ui';
+import { Button, Card, ConfirmDelete, Empty, Field, Input, Modal, MoneyInput, NumberInput, PageHeader, Progress, Segmented, Select, Stat, Tilt, cx } from '../components/ui';
 import { VEHICLE_EXPENSE_CATEGORIES } from '../lib/categories';
 import { daysUntil, formatBRL, formatDate, formatNumber, localISODate } from '../lib/format';
 import { oilStatus, vehicleAlerts, vehicleFixedMonthly } from '../lib/stats';
@@ -40,7 +40,7 @@ export default function Vehicles({ id }: { id?: string }) {
             const alerts = vehicleAlerts([v]);
             const oil = oilStatus(v);
             return (
-              <button key={v.id} onClick={() => go('veiculos', v.id)} className={cx('rounded-2xl border border-white/5 bg-slate-900/60 p-4 text-left transition hover:border-brand-500/30', !v.active && 'opacity-50')}>
+              <Tilt as="button" key={v.id} onClick={() => go('veiculos', v.id)} className={cx('glass rounded-3xl p-4 text-left', !v.active && 'opacity-50')}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-white">{v.name}</p>
@@ -55,7 +55,7 @@ export default function Vehicles({ id }: { id?: string }) {
                 </div>
                 {oil && <div className="mt-3"><div className="mb-1 flex justify-between text-[11px] text-slate-500"><span>Óleo</span><span>{oil.remaining > 0 ? `faltam ${formatNumber(oil.remaining)} km` : 'vencido'}</span></div><Progress value={oil.pct} tone={oil.remaining <= 0 ? 'bad' : oil.remaining <= 1000 ? 'warn' : 'good'} /></div>}
                 {alerts.length > 0 && <p className="mt-3 text-xs text-amber-400">⚠ {alerts.map((a) => a.title.split(' · ')[0]).join(', ')}</p>}
-              </button>
+              </Tilt>
             );
           })}
         </div>
@@ -126,8 +126,8 @@ function VehicleDetail({ v, onEdit }: { v: Vehicle; onEdit: () => void }) {
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Hodômetro" value={`${formatNumber(v.odometer)} km`} icon={<Gauge size={14} />} />
-        <Stat label="Gasto no mês" value={formatBRL(monthTotal)} tone="bad" sub="inclui combustível das corridas" />
-        <Stat label="Custo fixo mensal" value={formatBRL(vehicleFixedMonthly(v))} tone="warn" sub={OWNERSHIP[v.ownership]} />
+        <Stat label="Gasto no mês" money={monthTotal} tone="bad" sub="inclui combustível das corridas" />
+        <Stat label="Custo fixo mensal" money={vehicleFixedMonthly(v)} tone="warn" sub={OWNERSHIP[v.ownership]} />
         <Stat label="Consumo médio" value={avgConsumption ? `${formatNumber(avgConsumption, 1)} km/l` : `${formatNumber(v.fuelConsumption, 1)} km/l`} sub={avgConsumption ? 'calculado pelos abastecimentos' : 'informado no cadastro'} />
       </div>
 
@@ -325,7 +325,7 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
             <Field label="Troca de óleo a cada"><NumberInput value={f.oilIntervalKm} onChange={(v) => set('oilIntervalKm', Math.round(v))} suffix="km" /></Field>
             <Field label="Última troca (hodômetro)"><NumberInput value={f.lastOilChangeKm ?? 0} onChange={(v) => set('lastOilChangeKm', Math.round(v) || null)} suffix="km" /></Field>
           </div>
-          <Field label="Anotações"><textarea className="min-h-24 w-full rounded-xl border border-white/10 bg-slate-950/60 p-3 text-sm text-white outline-none focus:border-brand-500/60" value={f.notes ?? ''} onChange={(e) => set('notes', e.target.value)} placeholder="Pneus trocados em…, correia dentada em…" /></Field>
+          <Field label="Anotações"><textarea className="min-h-24 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-brand-500/60" value={f.notes ?? ''} onChange={(e) => set('notes', e.target.value)} placeholder="Pneus trocados em…, correia dentada em…" /></Field>
         </div>
       )}
     </Modal>

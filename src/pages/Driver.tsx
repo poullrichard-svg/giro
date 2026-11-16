@@ -51,10 +51,10 @@ export default function Driver() {
       } />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Faturamento bruto" value={formatBRL(st.gross)} tone="good" sub={mode !== 'dia' ? `média ${formatBRL(st.avgPerDay)}/dia` : undefined} />
-        <Stat label="Custos operacionais" value={formatBRL(st.operationalCost)} tone="bad" sub={`comb. ${formatBRL(st.fuel)} · alim. ${formatBRL(st.food)}`} />
-        <Stat label="Custo fixo do carro" value={formatBRL(st.fixedCost)} tone="warn" sub={`parcela/seguro/IPVA · ${period.days} ${period.days === 1 ? 'dia' : 'dias'}`} />
-        <Stat label="Lucro líquido" value={formatBRL(st.netProfit)} tone={st.netProfit >= 0 ? 'good' : 'bad'} sub={`antes dos fixos: ${formatBRL(st.operationalProfit)}`} />
+        <Stat label="Faturamento bruto" money={st.gross} tone="good" sub={mode !== 'dia' ? `média ${formatBRL(st.avgPerDay)}/dia` : undefined} />
+        <Stat label="Custos operacionais" money={st.operationalCost} tone="bad" sub={`comb. ${formatBRL(st.fuel)} · alim. ${formatBRL(st.food)}`} />
+        <Stat label="Custo fixo do carro" money={st.fixedCost} tone="warn" sub={`parcela/seguro/IPVA · ${period.days} ${period.days === 1 ? 'dia' : 'dias'}`} />
+        <Stat label="Lucro líquido" money={st.netProfit} tone={st.netProfit >= 0 ? 'good' : 'bad'} sub={`antes dos fixos: ${formatBRL(st.operationalProfit)}`} />
       </div>
 
       <Card className="mb-4">
@@ -73,9 +73,9 @@ export default function Driver() {
         <Stat label="Corridas" value={st.trips} icon={<RouteIcon size={14} />} />
         <Stat label="Horas" value={hoursToHHMM(st.hours)} icon={<Clock size={14} />} />
         <Stat label="Km rodados" value={formatNumber(st.km)} icon={<Gauge size={14} />} />
-        <Stat label="R$ / hora" value={formatBRL(st.perHour)} sub={`lucro ${formatBRL(st.profitPerHour)}`} />
-        <Stat label="R$ / km" value={formatBRL(st.perKm)} sub={`custo ${formatBRL(st.costPerKm)}`} />
-        <Stat label="R$ / corrida" value={formatBRL(st.perTrip)} sub={`lucro ${formatBRL(st.profitPerTrip)}`} />
+        <Stat label="R$ / hora" money={st.perHour} sub={`lucro ${formatBRL(st.profitPerHour)}`} />
+        <Stat label="R$ / km" money={st.perKm} sub={`custo ${formatBRL(st.costPerKm)}`} />
+        <Stat label="R$ / corrida" money={st.perTrip} sub={`lucro ${formatBRL(st.profitPerTrip)}`} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
