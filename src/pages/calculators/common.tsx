@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Lightbulb } from 'lucide-react';
 import { Card, Field, NumberInput, Segmented, Stat, type Tone } from '../../components/ui';
 
 /** Layout padrão: entradas à esquerda, resultado à direita (empilha no celular). */
@@ -42,7 +43,22 @@ export function Big({ label, value, tone = 'text-white', sub }: { label: string;
 }
 
 export function Tip({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3 text-xs leading-relaxed text-sky-200/80">{children}</p>;
+  return (
+    <div className="flex gap-3 rounded-[1.4rem] border border-sky-500/20 bg-sky-500/[.06] p-4">
+      <Lightbulb size={18} className="mt-0.5 shrink-0 text-sky-400" />
+      <p className="text-xs leading-relaxed text-sky-100/80">{children}</p>
+    </div>
+  );
+}
+
+/** Veredito em destaque (ex.: "Compensa parcelar"). */
+export function Verdict({ tone, title, children }: { tone: Tone; title: ReactNode; children?: ReactNode }) {
+  return (
+    <div className="solid shine rounded-[1.75rem] p-5" style={{ '--tone': ({ good: '#10b981', bad: '#f43f5e', warn: '#f59e0b', info: '#3b82f6', brand: '#16a34a' } as Record<string, string>)[tone] ?? '#16a34a' } as React.CSSProperties}>
+      <p className="relative font-display text-xl font-black">{title}</p>
+      {children && <p className="relative mt-1 text-sm font-medium text-white/85">{children}</p>}
+    </div>
+  );
 }
 
 export const toMonthly = (pct: number, period: 'mes' | 'ano') => (period === 'mes' ? pct / 100 : Math.pow(1 + pct / 100, 1 / 12) - 1);

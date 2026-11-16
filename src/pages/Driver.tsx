@@ -9,7 +9,7 @@ import { driverStats } from '../lib/stats';
 import type { DriverApp, DriverSession } from '../types';
 
 type Mode = 'dia' | 'semana' | 'mes';
-const APP_COLORS: Record<string, string> = { Uber: '#94a3b8', '99': '#f59e0b', InDrive: '#84cc16', Particular: '#10b981', Outro: '#7c5cff' };
+const APP_COLORS: Record<string, string> = { Uber: '#94a3b8', '99': '#f59e0b', InDrive: '#84cc16', Particular: '#10b981', Outro: '#16a34a' };
 
 const weekStart = (iso: string) => { const d = parseISODate(iso); return addDays(iso, -((d.getDay() + 6) % 7)); };
 
@@ -91,11 +91,11 @@ export default function Driver() {
             <ul className="stagger space-y-2.5">
               {st.byApp.map((a) => (
                 <li key={a.label} className="group surface surface-hover flex items-center gap-3 rounded-[1.4rem] p-3">
-                  <IconChip tone={APP_COLORS[a.label] ?? '#7c5cff'}><Car size={18} /></IconChip>
+                  <IconChip tone={APP_COLORS[a.label] ?? '#16a34a'}><Car size={18} /></IconChip>
                   <div className="min-w-0 flex-1">
                     <p className="label text-slate-500">Plataforma</p>
                     <p className="font-display text-[15px] font-black text-white">{a.label}</p>
-                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5"><div className="fill-x h-full rounded-full" style={{ width: `${(a.value / st.gross) * 100}%`, background: APP_COLORS[a.label] ?? '#7c5cff' }} /></div>
+                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5"><div className="fill-x h-full rounded-full" style={{ width: `${(a.value / st.gross) * 100}%`, background: APP_COLORS[a.label] ?? '#16a34a' }} /></div>
                   </div>
                   <div className="text-right"><p className="label text-slate-500">Ganhos</p><p className="font-mono text-sm font-extrabold text-white">{formatBRL(a.value)}</p></div>
                 </li>
@@ -111,7 +111,7 @@ export default function Driver() {
               {st.sessions.map((s) => {
                 const v = data.vehicles.find((x) => x.id === s.vehicleId);
                 return (
-                  <Row key={s.id} tone={APP_COLORS[s.app] ?? '#7c5cff'} icon={<span className="font-display text-[11px] font-black">{s.app.slice(0, 3)}</span>}
+                  <Row key={s.id} tone={APP_COLORS[s.app] ?? '#16a34a'} icon={<span className="font-display text-[11px] font-black">{s.app.slice(0, 3)}</span>}
                     title={`${formatDayLabel(s.date)} · ${s.trips} corridas`}
                     subtitle={[`${formatNumber(s.kmDriven)} km`, s.hoursWorked, s.fuelSpent > 0 && `comb. ${formatBRL(s.fuelSpent)}`, v?.name].filter(Boolean).join(' · ')}
                     amount={formatBRL(s.amount)} amountTone="good" onClick={() => setForm({ open: true, editing: s })}

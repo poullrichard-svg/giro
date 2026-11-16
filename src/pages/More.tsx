@@ -50,7 +50,7 @@ export default function More() {
       <h1 className="text-xl font-bold text-white">Mais</h1>
       <div className="grid grid-cols-2 gap-2 md:hidden">
         {NAV.filter((n) => !['inicio', 'lancamentos', 'motorista'].includes(n.id)).map((n) => (
-          <a key={n.id} href={`#/${n.id}`} className="glass press flex items-center gap-3 rounded-3xl p-4 text-sm font-semibold text-slate-100"><n.icon size={20} className="text-brand-400" />{n.label}</a>
+          <a key={n.id} href={`#/${n.id}`} className="surface surface-hover press flex items-center gap-3 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-100"><n.icon size={20} className="text-brand-400" />{n.label}</a>
         ))}
       </div>
 

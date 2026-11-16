@@ -14,7 +14,7 @@ export const merge = (base: string, extra?: string) => {
 };
 
 /** Cores de cada "tom" usado nos cartões. */
-export const TONES = { brand: '#7c5cff', good: '#10b981', bad: '#f43f5e', warn: '#f59e0b', info: '#3b82f6', pink: '#d946ef', cyan: '#06b6d4' } as const;
+export const TONES = { brand: '#16a34a', good: '#10b981', bad: '#f43f5e', warn: '#f59e0b', info: '#3b82f6', pink: '#d946ef', cyan: '#06b6d4' } as const;
 export type Tone = keyof typeof TONES;
 const toneVar = (t: Tone | string) => ({ '--tone': (TONES as Record<string, string>)[t] ?? t } as CSSProperties);
 
@@ -103,7 +103,7 @@ export function Card({ children, className, title, action, hover }: { children: 
 type BtnVariant = 'primary' | 'ghost' | 'danger' | 'soft';
 export function Button({ variant = 'primary', className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant }) {
   const v = {
-    primary: 'btn-shine bg-gradient-to-br from-brand-400 via-brand-500 to-brand-600 text-white shadow-[0_10px_30px_-10px] shadow-brand-500/70 hover:shadow-brand-500 hover:brightness-110',
+    primary: 'btn-shine bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 text-white shadow-[0_10px_30px_-10px] shadow-brand-500/70 hover:shadow-brand-500 hover:brightness-110',
     soft: 'bg-white/[.05] text-slate-100 ring-1 ring-inset ring-white/10 hover:bg-white/10',
     ghost: 'text-slate-400 hover:bg-white/5 hover:text-white',
     danger: 'bg-rose-500/10 text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20',
@@ -190,7 +190,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
   const i = Math.max(0, options.findIndex((o) => o.value === value));
   return (
     <div className={cx('relative grid auto-cols-fr grid-flow-col rounded-2xl bg-[#08070f] p-1 ring-1 ring-inset ring-white/[.07]', className)}>
-      <span aria-hidden="true" className="absolute bottom-1 left-1 top-1 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-[0_6px_20px_-6px] shadow-brand-500 transition-transform duration-500 ease-[var(--ease-spring)]"
+      <span aria-hidden="true" className="absolute bottom-1 left-1 top-1 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-[0_6px_20px_-6px] shadow-brand-500 transition-transform duration-500 ease-[var(--ease-spring)]"
         style={{ width: `calc((100% - .5rem) / ${options.length})`, transform: `translateX(${i * 100}%)` }} />
       {options.map((o) => (
         <button key={o.value} type="button" onClick={() => onChange(o.value)} className={cx('relative z-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] transition-colors duration-300', value === o.value ? 'text-white' : 'text-slate-500 hover:text-slate-200')}>
@@ -213,7 +213,7 @@ export function Modal({ open, onClose, title, children, footer }: { open: boolea
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm animate-fade md:items-center md:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-label={title} className="surface animate-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2.25rem] md:max-w-lg md:rounded-[2.25rem]">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(80%_100%_at_50%_0%,rgba(124,92,255,.22),transparent)]" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(80%_100%_at_50%_0%,rgba(34,197,94,.18),transparent)]" />
         <div aria-hidden="true" className="mx-auto mt-2.5 h-1.5 w-12 rounded-full bg-white/15 md:hidden" />
         <header className="relative flex items-center justify-between px-6 pb-3 pt-5">
           <h2 className="font-display text-xl font-black tracking-tight text-white">{title}</h2>
@@ -316,7 +316,7 @@ export function PeriodNav({ label, onPrev, onNext, onToday }: { label: string; o
 }
 
 export function Progress({ value, tone = 'good' }: { value: number; tone?: 'good' | 'warn' | 'bad' | 'brand' }) {
-  const c = { good: 'from-emerald-400 to-emerald-500 shadow-emerald-400/60', warn: 'from-amber-300 to-orange-500 shadow-amber-400/60', bad: 'from-rose-400 to-rose-600 shadow-rose-500/60', brand: 'from-brand-400 to-fuchsia-500 shadow-brand-400/60' }[tone];
+  const c = { good: 'from-emerald-400 to-emerald-500 shadow-emerald-400/60', warn: 'from-amber-300 to-orange-500 shadow-amber-400/60', bad: 'from-rose-400 to-rose-600 shadow-rose-500/60', brand: 'from-brand-400 to-teal-400 shadow-brand-400/60' }[tone];
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div className="h-3 w-full overflow-hidden rounded-full bg-white/[.05] p-0.5 ring-1 ring-inset ring-white/5">

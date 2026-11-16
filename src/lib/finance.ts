@@ -288,3 +288,137 @@ export function driverCost(i: DriverCostInput) {
     revenueNeeded: round2(monthlyCost + i.desiredProfitMonthly),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Investimentos em renda variável
+// ---------------------------------------------------------------------------
+
+/**
+ * Viver de dividendos / "número mágico".
+ * `dividendPerShare` é por mês (FIIs) — para ações, passe o anual / 12.
+ */
+export function dividendPlan(price: number, dividendPerShare: number, targetMonthlyIncome: number) {
+  if (price <= 0 || dividendPerShare <= 0) return null;
+  const magicNumber = Math.ceil(price / dividendPerShare);
+  const sharesForTarget = Math.ceil(targetMonthlyIncome / dividendPerShare);
+  return {
+    monthlyYield: dividendPerShare / price,
+    annualYield: (dividendPerShare * 12) / price,
+    magicNumber,
+    magicCapital: round2(magicNumber * price),
+    sharesForTarget,
+    capitalForTarget: round2(sharesForTarget * price),
+  };
+}
+
+/** Preço teto (método Bazin): dividendo anual por ação ÷ rendimento mínimo desejado. */
+export const bazinCeiling = (annualDividendPerShare: number, minYield = 0.06) => (minYield > 0 ? round2(annualDividendPerShare / minYield) : 0);
+
+/** Preço justo (fórmula de Graham): √(22,5 × LPA × VPA). Retorna null se LPA ou VPA ≤ 0. */
+export const grahamFairPrice = (eps: number, bookValuePerShare: number) => (eps > 0 && bookValuePerShare > 0 ? round2(Math.sqrt(22.5 * eps * bookValuePerShare)) : null);
+
+/** Margem de segurança: quanto o preço atual está abaixo (positivo) ou acima (negativo) do preço de referência. */
+export const safetyMargin = (reference: number, price: number) => (reference > 0 ? (reference - price) / reference : 0);
+
+export interface Lot { qty: number; price: number; fees?: number }
+/** Preço médio de compra (taxas entram no custo). */
+export function averagePrice(lots: Lot[]) {
+  const qty = lots.reduce((s, l) => s + (l.qty || 0), 0);
+  const cost = lots.reduce((s, l) => s + (l.qty || 0) * (l.price || 0) + (l.fees || 0), 0);
+  return { qty, cost: round2(cost), average: qty > 0 ? cost / qty : 0 };
+}
+
+// ---------------------------------------------------------------------------
+// Taxas e inflação
+// ---------------------------------------------------------------------------
+
+/** Rentabilidade real: desconta a inflação do ganho nominal (fórmula de Fisher). */
+export const realRate = (nominal: number, inflation: number) => (1 + nominal) / (1 + inflation) - 1;
+/** Taxa equivalente entre períodos. `fromPeriods`/`toPeriods` = quantos períodos cabem em 1 ano (12 = mês, 252 = dia útil, 1 = ano). */
+export const convertRate = (rate: number, fromPeriods: number, toPeriods: number) => Math.pow(1 + rate, fromPeriods / toPeriods) - 1;
+/** Quanto `value` de hoje vale em poder de compra depois de `years` com inflação anual. */
+export const purchasingPower = (value: number, inflationAnnual: number, years: number) => round2(value / Math.pow(1 + inflationAnnual, years));
+/** Quanto será preciso no futuro para comprar o mesmo que `value` compra hoje. */
+export const inflationAdjusted = (value: number, inflationAnnual: number, years: number) => round2(value * Math.pow(1 + inflationAnnual, years));
+
+// ---------------------------------------------------------------------------
+// Decisões de compra
+// ---------------------------------------------------------------------------
+
+export interface CashVsInstallmentsInput {
+  cashPrice: number; // preço à vista (já com desconto)
+  installment: number; // valor de cada parcela
+  count: number; // número de parcelas
+  firstNow: boolean; // primeira parcela paga no ato?
+  investMonthlyRate: number; // quanto o dinheiro renderia por mês
+}
+
+export function cashVsInstallments(i: CashVsInstallmentsInput) {
+  const total = i.installment * i.count;
+  // Valor presente das parcelas, descontado pelo rendimento que você teria.
+  let pv = 0;
+  for (let k = 0; k < i.count; k++) pv += i.installment / Math.pow(1 + i.investMonthlyRate, i.firstNow ? k : k + 1);
+  // Juros embutidos no parcelado em relação ao preço à vista.
+  const financed = i.firstNow ? i.cashPrice - i.installment : i.cashPrice;
+  const periods = i.firstNow ? i.count - 1 : i.count;
+  const hiddenRate = periods > 0 ? rateFromPmt(financed, i.installment, periods) : 0;
+  return {
+    total: round2(total),
+    presentValue: round2(pv),
+    discountPct: total > 0 ? 1 - i.cashPrice / total : 0,
+    hiddenMonthlyRate: hiddenRate,
+    better: (pv < i.cashPrice ? 'parcelado' : 'avista') as 'parcelado' | 'avista',
+    advantage: round2(Math.abs(i.cashPrice - pv)),
+  };
+}
+
+export interface RentVsBuyInput {
+  propertyPrice: number;
+  downPayment: number;
+  loanMonthlyRate: number;
+  loanMonths: number;
+  monthlyCostsOwner: number; // condomínio/IPTU/manutenção que só o dono paga (aproximação)
+  rent: number;
+  rentAnnualIncrease: number;
+  investMonthlyRate: number;
+  propertyAnnualAppreciation: number;
+  horizonMonths: number;
+}
+
+/**
+ * Compara o patrimônio de quem compra financiado com o de quem aluga e investe a diferença,
+ * ao fim de `horizonMonths`. Os dois gastam o mesmo dinheiro por mês: quem gasta menos investe a sobra.
+ */
+export function rentVsBuy(i: RentVsBuyInput) {
+  const principal = Math.max(0, i.propertyPrice - i.downPayment);
+  const sched = loan(principal, i.loanMonthlyRate, i.loanMonths, 'price').schedule;
+  let renterWealth = i.downPayment; // quem aluga investe a entrada
+  let buyerInvest = 0;
+  let rent = i.rent;
+  let paidRent = 0;
+  let paidLoan = 0;
+  for (let m = 1; m <= i.horizonMonths; m++) {
+    if (m > 1 && (m - 1) % 12 === 0) rent *= 1 + i.rentAnnualIncrease;
+    const ownerCost = (sched[m - 1]?.installment ?? 0) + i.monthlyCostsOwner;
+    renterWealth *= 1 + i.investMonthlyRate;
+    buyerInvest *= 1 + i.investMonthlyRate;
+    if (ownerCost > rent) renterWealth += ownerCost - rent;
+    else buyerInvest += rent - ownerCost;
+    paidRent += rent;
+    paidLoan += sched[m - 1]?.installment ?? 0;
+  }
+  const propertyValue = i.propertyPrice * Math.pow(1 + i.propertyAnnualAppreciation, i.horizonMonths / 12);
+  const debt = i.horizonMonths >= i.loanMonths ? 0 : sched[i.horizonMonths - 1]?.balance ?? principal;
+  const buyerWealth = propertyValue - debt + buyerInvest;
+  return {
+    buyerWealth: round2(buyerWealth),
+    renterWealth: round2(renterWealth),
+    propertyValue: round2(propertyValue),
+    remainingDebt: round2(debt),
+    paidRent: round2(paidRent),
+    paidLoan: round2(paidLoan),
+    firstInstallment: sched[0]?.installment ?? 0,
+    better: (buyerWealth >= renterWealth ? 'comprar' : 'alugar') as 'comprar' | 'alugar',
+    difference: round2(Math.abs(buyerWealth - renterWealth)),
+  };
+}

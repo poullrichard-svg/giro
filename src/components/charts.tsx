@@ -81,7 +81,7 @@ export function Bars({ data, series }: { data: Array<{ label: string; values: nu
 }
 
 /** Linha com área em gradiente para evolução de patrimônio / saldo. */
-export function Line({ points, color = '#a78bfa', secondary }: { points: number[]; color?: string; secondary?: number[] }) {
+export function Line({ points, color = '#4ade80', secondary }: { points: number[]; color?: string; secondary?: number[] }) {
   const id = useId();
   if (points.length < 2) return null;
   const all = [...points, ...(secondary ?? [])];

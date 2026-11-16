@@ -67,7 +67,7 @@ export default function Shell() {
               return (
                 <a key={n.id} href={`#/${n.id}`} className={cx('group relative flex items-center gap-3.5 rounded-2xl px-3 py-2.5 text-[14px] font-bold transition-all duration-300', active ? 'bg-gradient-to-r from-brand-500/20 to-transparent text-white' : 'text-slate-500 hover:translate-x-1 hover:bg-white/[.03] hover:text-slate-200')}>
                   {active && <span aria-hidden="true" className="absolute -left-4 top-1/2 h-7 w-1.5 -translate-y-1/2 rounded-r-full bg-brand-400 shadow-[0_0_14px] shadow-brand-400" />}
-                  <span className={cx('flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-500', active ? 'solid scale-105' : 'bg-white/[.03] ring-1 ring-white/5 group-hover:scale-110 group-hover:-rotate-6')} style={active ? ({ '--tone': '#7c5cff' } as React.CSSProperties) : undefined}>
+                  <span className={cx('flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-500', active ? 'solid scale-105' : 'bg-white/[.03] ring-1 ring-white/5 group-hover:scale-110 group-hover:-rotate-6')} style={active ? ({ '--tone': '#16a34a' } as React.CSSProperties) : undefined}>
                     <n.icon size={17} strokeWidth={2.2} />
                   </span>
                   {n.label}
@@ -85,7 +85,7 @@ export default function Shell() {
           {/* Computador: barra superior */}
           <header className="sticky top-0 z-20 hidden items-center justify-between border-b border-white/[.05] bg-[#05040b]/75 px-8 py-4 backdrop-blur-md md:flex">
             <p className="label flex items-center gap-2 text-slate-500">{current && <current.icon size={14} />} {current?.label ?? 'Início'}</p>
-            <button onClick={() => openTx()} className="press btn-shine pulse-ring flex items-center gap-2 rounded-2xl bg-gradient-to-br from-brand-400 via-brand-500 to-brand-600 px-5 py-3 text-[12px] font-extrabold uppercase tracking-[.08em] text-white shadow-[0_10px_30px_-10px] shadow-brand-500">
+            <button onClick={() => openTx()} className="press btn-shine pulse-ring flex items-center gap-2 rounded-2xl bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 px-5 py-3 text-[12px] font-extrabold uppercase tracking-[.08em] text-white shadow-[0_10px_30px_-10px] shadow-brand-500">
               <Plus size={17} strokeWidth={3} /> Novo lançamento
             </button>
           </header>
@@ -110,7 +110,7 @@ export default function Shell() {
               if (id === 'novo') {
                 return (
                   <div key={id} className="flex justify-center">
-                    <button onClick={() => openTx()} aria-label="Novo lançamento" className="press pulse-ring -mt-10 flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-brand-400 via-brand-500 to-fuchsia-600 text-white shadow-[0_14px_30px_-8px] shadow-brand-500 ring-[5px] ring-[var(--color-ink)]">
+                    <button onClick={() => openTx()} aria-label="Novo lançamento" className="press pulse-ring -mt-10 flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-brand-500 via-brand-600 to-emerald-700 text-white shadow-[0_14px_30px_-8px] shadow-brand-500 ring-[5px] ring-[var(--color-ink)]">
                       <Plus size={30} strokeWidth={3} />
                     </button>
                   </div>
@@ -120,7 +120,7 @@ export default function Shell() {
               const active = route === id || (id === 'mais' && !MOBILE.includes(route));
               return (
                 <button key={id} onClick={() => go(id)} className={cx('press flex flex-col items-center gap-1 py-1', active ? 'text-white' : 'text-slate-500')}>
-                  <span className={cx('flex h-9 w-12 items-center justify-center rounded-2xl transition-all duration-500 ease-[var(--ease-spring)]', active ? 'solid scale-110' : '')} style={active ? ({ '--tone': '#7c5cff' } as React.CSSProperties) : undefined}>
+                  <span className={cx('flex h-9 w-12 items-center justify-center rounded-2xl transition-all duration-500 ease-[var(--ease-spring)]', active ? 'solid scale-110' : '')} style={active ? ({ '--tone': '#16a34a' } as React.CSSProperties) : undefined}>
                     <n.icon size={19} strokeWidth={2.3} />
                   </span>
                   <span className="text-[10px] font-extrabold uppercase tracking-wider">{n.label === 'Lançamentos' ? 'Extrato' : n.label}</span>

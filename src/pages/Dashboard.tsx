@@ -48,8 +48,8 @@ export default function Dashboard() {
       </div>
 
       {/* Cartão principal 3D com borda luminosa */}
-      <Tilt max={5} className="solid ring-glow shine rounded-[2.25rem] p-6 md:p-8" style={{ '--tone': '#7c5cff' } as React.CSSProperties}>
-        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-fuchsia-400/40 blur-3xl" />
+      <Tilt max={5} className="solid ring-glow shine rounded-[2.25rem] p-6 md:p-8" style={{ '--tone': '#16a34a' } as React.CSSProperties}>
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-lime-300/30 blur-3xl" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-sky-400/25 blur-3xl" />
         <span className="watermark !opacity-[.13] text-white"><Wallet size={190} strokeWidth={1.4} /></span>
         <div className="relative grid gap-6 md:grid-cols-[1.2fr_1fr] md:items-end">
@@ -84,7 +84,7 @@ export default function Dashboard() {
       <form onSubmit={(e) => { e.preventDefault(); quickAdd({ text: quick }); setQuick(''); }} className="surface group flex items-center gap-3 rounded-[1.75rem] p-2 pl-5 transition duration-300 focus-within:border-brand-400/50 focus-within:ring-4 focus-within:ring-brand-500/15">
         <Sparkles size={20} className="shrink-0 text-brand-300 transition duration-500 group-focus-within:rotate-[20deg] group-focus-within:scale-125" />
         <input value={quick} onChange={(e) => setQuick(e.target.value)} placeholder='Lançar rápido: "gastei 45 mercado no débito"' className="min-h-12 min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-slate-500" />
-        <button type="submit" className="press btn-shine rounded-[1.2rem] bg-gradient-to-br from-brand-400 to-brand-600 px-5 py-3.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-white shadow-[0_8px_24px_-8px] shadow-brand-500">Lançar</button>
+        <button type="submit" className="press btn-shine rounded-[1.2rem] bg-gradient-to-br from-brand-500 to-brand-700 px-5 py-3.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-white shadow-[0_8px_24px_-8px] shadow-brand-500">Lançar</button>
       </form>
 
       {isCurrent && alerts.length > 0 && (

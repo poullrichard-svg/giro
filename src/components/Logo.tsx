@@ -4,11 +4,11 @@ import { useId } from 'react';
 export function Logo({ size = 32, spin }: { size?: number; spin?: boolean }) {
   const id = useId();
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" className="drop-shadow-[0_8px_16px_rgba(124,92,255,.45)]">
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" className="drop-shadow-[0_8px_16px_rgba(34,197,94,.45)]">
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#7c5cff" />
-          <stop offset="1" stopColor="#d946ef" />
+          <stop offset="0" stopColor="#22c55e" />
+          <stop offset="1" stopColor="#15803d" />
         </linearGradient>
       </defs>
       <rect width="64" height="64" rx="18" fill={`url(#${id})`} />
