@@ -1,10 +1,11 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { CloudOff, Download, HardDrive, MessageCircle, RefreshCw, Smartphone, Trash2, Upload } from 'lucide-react';
+import { CloudOff, Download, Receipt, HardDrive, MessageCircle, RefreshCw, Smartphone, Trash2, Upload } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
 import { BACKUP_KEY, downloadBackup, parseBackup } from '../data/backup';
 import { NAV } from '../components/Shell';
-import { Button, Card } from '../components/ui';
+import { Button, Card, Field, MoneyInput, NumberInput } from '../components/ui';
+import { rules } from '../lib/validate';
 import { downloadCSV } from '../lib/csv';
 import { ImportStatement } from '../components/ImportStatement';
 import { daysUntil, formatDate, localISODate } from '../lib/format';
@@ -78,6 +79,8 @@ export default function More() {
         <p className="mt-2 text-[11px] text-slate-500">Aceita OFX e CSV dos bancos, o CSV do próprio Giro e a tabela <em>transactions</em> exportada do Supabase. Lançamentos repetidos são detectados e ficam desmarcados.</p>
       </Card>
 
+      <MeiCard />
+
       <Card title={<span className="flex items-center gap-2"><Smartphone size={16} /> Instalar no celular</span>}>
         <p className="text-sm text-slate-400"><strong className="text-slate-200">Android (Chrome):</strong> menu ⋮ → “Instalar app”.<br /><strong className="text-slate-200">iPhone (Safari):</strong> compartilhar → “Adicionar à Tela de Início”.<br />Abre em tela cheia, como um app.</p>
       </Card>
@@ -96,5 +99,36 @@ export default function More() {
       </Card>
       <ImportStatement open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
+  );
+}
+
+const DAS_ID = 'das-mei';
+/** DAS do MEI: vira uma conta fixa mensal (aparece nos vencimentos, lembretes e previsão). */
+function MeiCard() {
+  const { data, put, remove } = useData();
+  const toast = useToast();
+  const bill = data.fixed.find((f) => f.id === DAS_ID);
+  const [amount, setAmount] = useState(bill?.amount ?? 0);
+  const [day, setDay] = useState(bill?.dueDay ?? 20);
+  const [error, setError] = useState<string | null>(null);
+  const save = async (on: boolean) => {
+    if (!on) { if (await remove('fixed', DAS_ID)) toast('Lembrete do DAS desligado'); return; }
+    const e = rules.positive(amount, 'Valor do DAS') || rules.dayOfMonth(day, 'Dia do vencimento');
+    setError(e || null);
+    if (e) return;
+    if (await put('fixed', { id: DAS_ID, description: 'DAS MEI', amount, type: 'expense', category: 'Impostos', dueDay: day })) toast(bill ? 'DAS atualizado' : 'Lembrete do DAS ligado');
+  };
+  return (
+    <Card title={<span className="flex items-center gap-2"><Receipt size={16} className="text-amber-400" /> MEI · lembrete do DAS</span>}>
+      <p className="mb-3 text-sm text-slate-400">Para quem é MEI: o DAS vira uma conta fixa mensal e aparece nos próximos vencimentos e lembretes. Confira o valor do seu boleto no app MEI ou no portal do Simples Nacional.</p>
+      <div className="grid grid-cols-2 items-start gap-3">
+        <Field label="Valor do DAS" error={error && error.startsWith('Valor') ? error : null}><MoneyInput value={amount} onChange={setAmount} /></Field>
+        <Field label="Vence todo dia" error={error && error.startsWith('Dia') ? error : null}><NumberInput value={day} onChange={(v) => setDay(Math.round(v))} /></Field>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button onClick={() => save(true)}>{bill ? 'Atualizar' : 'Ligar lembrete'}</Button>
+        {bill && <Button variant="danger" onClick={() => save(false)}>Desligar</Button>}
+      </div>
+    </Card>
   );
 }

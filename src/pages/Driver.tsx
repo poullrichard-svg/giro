@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Briefcase, CalendarDays, Car, CircleDollarSign, Package, Pencil, Plus, SlidersHorizontal, Smartphone, Target, TrendingDown, TrendingUp } from 'lucide-react';
+import { Briefcase, CalendarDays, Car, CircleDollarSign, Package, Pencil, Plus, SlidersHorizontal, Smartphone, Target, TrendingDown, TrendingUp, Wrench } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
 import { BigTile, Button, Card, ConfirmDelete, Empty, Field, IconButton, IconChip, Input, MiniStat, Modal, MoneyInput, NumberInput, PageHeader, PeriodNav, Progress, Row, Segmented, Select, cx } from '../components/ui';
@@ -8,6 +8,8 @@ import { WorkSetup } from '../components/WorkSetup';
 import { countFieldLabel, countLabel, incomeCategoryFor, kindsOf, panelTitle, platformOf, PROFILE_ID, unitLabel, WORK_TYPES } from '../lib/work';
 import { addDays, addMonths, elapsedDays, formatBRL, formatDayLabel, formatNumber, hoursToHHMM, localISODate, monthLabel, parseISODate } from '../lib/format';
 import { driverStats } from '../lib/stats';
+import { appProfit, maintenanceRates } from '../lib/driverInsights';
+import { BestTimes } from '../components/BestTimes';
 import type { DriverSession, WorkKind, WorkProfile } from '../types';
 
 type Mode = 'dia' | 'semana' | 'mes';
@@ -62,6 +64,18 @@ function DriverPanel({ profile }: { profile: WorkProfile }) {
   }, [mode, day]);
 
   const st = useMemo(() => driverStats(data.sessions, data.vehicleExpenses, data.vehicles, period.filter, period.days), [data.sessions, data.vehicleExpenses, data.vehicles, period]);
+  const apps = useMemo(() => appProfit(st.sessions, st.vehicleExpenses + st.fixedCost), [st]);
+  // Quanto separar para manutenção pelos km rodados no período (veículos com reserva configurada).
+  const reserve = useMemo(() => {
+    let amount = 0; let km = 0;
+    for (const x of st.sessions) {
+      const v = data.vehicles.find((y) => y.id === x.vehicleId);
+      if (!v) continue;
+      const r = maintenanceRates(v); const per = r.pneus + r.oleo + r.revisao;
+      if (per > 0) { amount += x.kmDriven * per; km += x.kmDriven; }
+    }
+    return { amount, km };
+  }, [st.sessions, data.vehicles]);
   const step = (n: number) => setDay(mode === 'dia' ? addDays(day, n) : mode === 'semana' ? addDays(day, 7 * n) : `${addMonths(day.slice(0, 7), n)}-01`);
   const goalTarget = goal * (mode === 'dia' ? 1 : Math.max(1, mode === 'semana' ? 6 : st.daysWorked || 22));
 
@@ -89,6 +103,13 @@ function DriverPanel({ profile }: { profile: WorkProfile }) {
         <BigTile label="Lucro líquido" money={st.netProfit} tone={st.netProfit >= 0 ? 'warn' : 'bad'} icon={<CircleDollarSign />} sub={`antes dos fixos ${formatBRL(st.operationalProfit)}`} />
       </div>
 
+      {reserve.km > 0 && (
+        <a href={`#/veiculos/${st.sessions.find((x) => x.vehicleId)?.vehicleId ?? ''}`} className="surface surface-hover mb-5 flex items-center gap-3 rounded-[1.5rem] p-3.5 pl-4">
+          <Wrench size={18} className="shrink-0 text-amber-400" />
+          <p className="min-w-0 flex-1 text-sm text-slate-300">Separe <strong className="font-mono text-amber-300">{formatBRL(reserve.amount)}</strong> deste período para manutenção <span className="text-slate-500">({formatNumber(reserve.km)} km × {formatBRL(reserve.amount / reserve.km)}/km)</span></p>
+        </a>
+      )}
+
       <Card className="mb-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <span className="label flex items-center gap-2 text-slate-300"><Target size={15} className="text-brand-300" /> Meta {mode === 'dia' ? 'do dia' : mode === 'semana' ? 'da semana (6 dias)' : 'do mês'}</span>
@@ -112,24 +133,36 @@ function DriverPanel({ profile }: { profile: WorkProfile }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">
-        <Card title={<><Smartphone size={14} className="text-brand-300" /> Faturamento por aplicativo</>}>
-          {st.byApp.length === 0 ? <p className="label py-8 text-center text-slate-600">Sem corridas no período</p> : (
-            <ul className="stagger space-y-2.5">
-              {st.byApp.map((a) => {
-                const pl = platformOf(profile, { app: a.label, platformId: null }); const Icon = KIND_ICON[pl.kind];
-                return (
-                <li key={a.label} className="group surface surface-hover flex items-center gap-3 rounded-[1.4rem] p-3">
-                  <IconChip tone={pl.color}><Icon size={18} /></IconChip>
-                  <div className="min-w-0 flex-1">
-                    <p className="label text-slate-500">Plataforma</p>
-                    <p className="font-display text-[15px] font-black text-white">{a.label}</p>
-                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5"><div className="fill-x h-full rounded-full" style={{ width: `${(a.value / st.gross) * 100}%`, background: pl.color }} /></div>
-                  </div>
-                  <div className="text-right"><p className="label text-slate-500">Ganhos</p><p className="font-mono text-sm font-extrabold text-white">{formatBRL(a.value)}</p></div>
-                </li>
-                );
-              })}
-            </ul>
+        <Card title={<><Smartphone size={14} className="text-brand-300" /> Aplicativos por lucro</>}>
+          {apps.length === 0 ? <p className="label py-8 text-center text-slate-600">Sem registros no período</p> : (
+            <>
+              <ul className="stagger space-y-2.5">
+                {apps.map((a, i) => {
+                  const pl = platformOf(profile, { app: a.app, platformId: null }); const Icon = KIND_ICON[pl.kind];
+                  return (
+                    <li key={a.app} className="group surface surface-hover rounded-[1.4rem] p-3">
+                      <div className="flex items-center gap-3">
+                        <IconChip tone={pl.color}><Icon size={18} /></IconChip>
+                        <div className="min-w-0 flex-1">
+                          <p className="label text-slate-500">{i === 0 && apps.length > 1 ? '🏆 Mais lucrativo' : 'Plataforma'}</p>
+                          <p className="truncate font-display text-[15px] font-black text-white">{a.app}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="label text-slate-500">Lucro</p>
+                          <p className={cx('font-mono text-sm font-extrabold', a.net >= 0 ? 'text-emerald-400' : 'text-rose-400')}>{formatBRL(a.net)}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2.5 grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-xl bg-white/[.03] py-1.5"><p className="label !text-[9px] text-slate-500">Faturou</p><p className="font-mono text-[11px] font-bold text-slate-200">{formatBRL(a.gross)}</p></div>
+                        <div className="rounded-xl bg-white/[.03] py-1.5"><p className="label !text-[9px] text-slate-500">Lucro/hora</p><p className="font-mono text-[11px] font-bold text-slate-200">{a.hours ? formatBRL(a.perHour) : '—'}</p></div>
+                        <div className="rounded-xl bg-white/[.03] py-1.5"><p className="label !text-[9px] text-slate-500">Margem</p><p className="font-mono text-[11px] font-bold text-slate-200">{Math.round(a.margin * 100)}%</p></div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-3 text-[11px] text-slate-500">Lucro = ganho − combustível e alimentação do turno − gastos e custo fixo do carro divididos pelos km rodados em cada app.</p>
+            </>
           )}
         </Card>
         <Card title={<><CalendarDays size={14} className="text-brand-300" /> Registros</>}>
@@ -156,6 +189,8 @@ function DriverPanel({ profile }: { profile: WorkProfile }) {
         </Card>
       </div>
 
+      <BestTimes sessions={data.sessions} />
+
       <SessionForm open={form.open} editing={form.editing} profile={profile} defaultDate={mode === 'dia' ? day : localISODate()} onClose={() => setForm({ open: false })} insert={insert} update={update} />
       <Modal open={setupOpen} onClose={() => setSetupOpen(false)} title="Seu jeito de trabalhar">
         <WorkSetup profile={profile} onDone={() => setSetupOpen(false)} />
@@ -175,19 +210,19 @@ function SessionForm({ open, editing, profile, defaultDate, onClose, insert, upd
   // Sugere a última plataforma usada.
   const lastPlatform = platforms.find((p) => p.id === data.sessions[0]?.platformId) ?? platforms[0];
   const vehicleFor = (kind?: string) => vehicles.find((v) => (v.kind ?? 'carro') === kind) ?? vehicles[0];
-  const empty = () => ({ date: defaultDate, app: lastPlatform?.name ?? 'Outro', platformId: (lastPlatform?.id ?? null) as string | null, workKind: lastPlatform?.kind ?? 'passageiro' as WorkKind, amount: 0, trips: 0, kmDriven: 0, hoursWorked: '08:00', fuelSpent: 0, foodSpent: 0, fuelConsumption: vehicleFor(lastPlatform?.vehicle)?.fuelConsumption ?? 10, observation: '', vehicleId: vehicleFor(lastPlatform?.vehicle)?.id ?? '' });
+  const empty = () => ({ date: defaultDate, startTime: data.sessions.find((x) => x.startTime)?.startTime ?? '', app: lastPlatform?.name ?? 'Outro', platformId: (lastPlatform?.id ?? null) as string | null, workKind: lastPlatform?.kind ?? 'passageiro' as WorkKind, amount: 0, trips: 0, kmDriven: 0, hoursWorked: '08:00', fuelSpent: 0, foodSpent: 0, fuelConsumption: vehicleFor(lastPlatform?.vehicle)?.fuelConsumption ?? 10, observation: '', vehicleId: vehicleFor(lastPlatform?.vehicle)?.id ?? '' });
   const [f, setF] = useState(empty);
   const [odometer, setOdometer] = useState(0);
   const [toLedger, setToLedger] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState<Errors<'date' | 'amount' | 'km' | 'hours' | 'platform' | 'odometer'>>({});
+  const [errors, setErrors] = useState<Errors<'date' | 'amount' | 'km' | 'hours' | 'platform' | 'odometer' | 'start'>>({});
   // Some com o erro assim que a pessoa mexe no formulário; volta a validar ao salvar.
   useEffect(() => { setErrors({}); }, [f, odometer]);
 
   useEffect(() => {
     if (!open) return;
     setErrors({});
-    setF(editing ? { ...editing, platformId: editing.platformId ?? null, workKind: editing.workKind ?? platformOf(profile, editing).kind, observation: editing.observation ?? '', vehicleId: editing.vehicleId ?? '' } : empty());
+    setF(editing ? { ...editing, startTime: editing.startTime ?? '', platformId: editing.platformId ?? null, workKind: editing.workKind ?? platformOf(profile, editing).kind, observation: editing.observation ?? '', vehicleId: editing.vehicleId ?? '' } : empty());
     setOdometer(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
@@ -202,12 +237,13 @@ function SessionForm({ open, editing, profile, defaultDate, onClose, insert, upd
       amount: [rules.positive(f.amount, f.workKind === 'fixo' ? 'Valor da diária' : 'Valor ganho'), rules.max(f.amount, 100_000, 'Valor')],
       km: [rules.nonNegative(f.kmDriven, 'Km rodados'), rules.max(f.kmDriven, 3000, 'Km rodados')],
       hours: [rules.time(f.hoursWorked, 'Horas')],
+      start: [f.startTime ? rules.time(f.startTime, 'Horário de início') : null],
       odometer: [vehicle && odometer > 0 && odometer < vehicle.odometer && `O hodômetro atual já é ${formatNumber(vehicle.odometer)} km`],
     });
     setErrors(e);
     if (hasErrors(e)) return;
     setBusy(true);
-    const payload = { ...f, vehicleId: f.vehicleId || null, observation: f.observation || null };
+    const payload = { ...f, startTime: f.startTime || null, vehicleId: f.vehicleId || null, observation: f.observation || null };
     let ok: boolean;
     if (editing) ok = await update('sessions', editing.id, payload);
     else {
@@ -253,10 +289,11 @@ function SessionForm({ open, editing, profile, defaultDate, onClose, insert, upd
           <Field label="Veículo"><Select value={f.vehicleId ?? ''} onChange={(e) => { const v = vehicles.find((x) => x.id === e.target.value); setF((x) => ({ ...x, vehicleId: e.target.value, fuelConsumption: v?.fuelConsumption ?? x.fuelConsumption })); }} options={[{ value: '', label: '—' }, ...vehicles.map((v) => ({ value: v.id, label: [v.name, v.plate].filter(Boolean).join(' · ') }))]} /></Field>
         )}
         <Field label={f.workKind === 'fixo' ? 'Valor da diária' : 'Quanto ganhou (bruto)'} error={errors.amount}><MoneyInput value={f.amount} onChange={(v) => set('amount', v)} className="text-lg font-semibold" /></Field>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 items-start gap-3">
+          <Field label="Começou às" error={errors.start} hint="Para achar seus melhores horários"><Input type="time" value={f.startTime ?? ''} onChange={(e) => set('startTime', e.target.value)} /></Field>
+          <Field label="Horas trabalhadas" error={errors.hours}><Input type="time" value={f.hoursWorked} onChange={(e) => set('hoursWorked', e.target.value)} /></Field>
           <Field label={countFieldLabel(f.workKind)}><NumberInput value={f.trips} onChange={(v) => set('trips', Math.round(v))} /></Field>
           <Field label="Km rodados" error={errors.km}><NumberInput value={f.kmDriven} onChange={(v) => set('kmDriven', v)} /></Field>
-          <Field label="Horas" error={errors.hours}><Input type="time" value={f.hoursWorked} onChange={(e) => set('hoursWorked', e.target.value)} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Combustível"><MoneyInput value={f.fuelSpent} onChange={(v) => set('fuelSpent', v)} /></Field>

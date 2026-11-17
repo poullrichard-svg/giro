@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bike, CalendarClock, Car, CarFront, Droplets, FileText, Fuel, Gauge, Motorbike, Pencil, Plus, Shield, Truck, Wrench } from 'lucide-react';
+import { ArrowLeft, Bike, CalendarClock, Car, CarFront, Droplets, FileText, Fuel, Gauge, Motorbike, Pencil, PiggyBank, Plus, Shield, Truck, Wrench } from 'lucide-react';
 import { VEHICLE_KINDS } from '../lib/work';
 import type { VehicleKind } from '../types';
 
@@ -11,6 +11,7 @@ import { hasErrors, rules, validate, type Errors } from '../lib/validate';
 import { VEHICLE_EXPENSE_CATEGORIES } from '../lib/categories';
 import { daysUntil, formatBRL, formatDate, formatNumber, localISODate } from '../lib/format';
 import { oilStatus, vehicleAlerts, vehicleFixedMonthly } from '../lib/stats';
+import { maintenanceReserve } from '../lib/driverInsights';
 import { go } from '../router';
 import type { Vehicle, VehicleExpense, VehicleOwnership } from '../types';
 
@@ -164,6 +165,8 @@ function VehicleDetail({ v, onEdit }: { v: Vehicle; onEdit: () => void }) {
           </div>
         </Card>
       </div>
+
+      <ReserveCard v={v} expenses={expenses} />
 
       <Card className="mt-4" title={`Gastos em ${year} · ${formatBRL(yearTotal)}`} action={<Select className="h-9 min-h-9 w-24" value={year} onChange={(e) => setYear(e.target.value)} options={years} />}>
         {byCat.length > 0 && (
@@ -353,9 +356,64 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
             <Field label="Troca de óleo a cada" error={errors.oilIntervalKm}><NumberInput value={f.oilIntervalKm} onChange={(v) => set('oilIntervalKm', Math.round(v))} suffix="km" /></Field>
             <Field label="Última troca (hodômetro)"><NumberInput value={f.lastOilChangeKm ?? 0} onChange={(v) => set('lastOilChangeKm', Math.round(v) || null)} suffix="km" /></Field>
           </div>
+          <div className="rounded-[1.4rem] bg-amber-500/[.05] p-4 ring-1 ring-amber-500/15">
+            <p className="label mb-1 text-amber-300">Reserva de manutenção</p>
+            <p className="mb-3 text-xs text-slate-400">Com esses custos, o app calcula quanto separar por km rodado para não ser pego de surpresa.</p>
+            <div className="grid grid-cols-2 items-start gap-3">
+              <Field label="Custo da troca de óleo"><MoneyInput value={f.oilChangeCost ?? 0} onChange={(v) => set('oilChangeCost', v || null)} /></Field>
+              <span />
+              <Field label="Jogo de pneus"><MoneyInput value={f.tireSetCost ?? 0} onChange={(v) => set('tireSetCost', v || null)} /></Field>
+              <Field label="Pneus duram"><NumberInput value={f.tireLifeKm ?? 0} onChange={(v) => set('tireLifeKm', Math.round(v) || null)} suffix="km" /></Field>
+              <Field label="Revisão / peças"><MoneyInput value={f.revisionCost ?? 0} onChange={(v) => set('revisionCost', v || null)} /></Field>
+              <Field label="A cada"><NumberInput value={f.revisionIntervalKm ?? 0} onChange={(v) => set('revisionIntervalKm', Math.round(v) || null)} suffix="km" /></Field>
+            </div>
+          </div>
           <Field label="Anotações"><textarea className="min-h-24 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-brand-500/60" value={f.notes ?? ''} onChange={(e) => set('notes', e.target.value)} placeholder="Pneus trocados em…, correia dentada em…" /></Field>
         </div>
       )}
     </Modal>
+  );
+}
+
+function ReserveCard({ v, expenses }: { v: Vehicle; expenses: VehicleExpense[] }) {
+  const { update } = useData();
+  const toast = useToast();
+  const r = maintenanceReserve(v, expenses);
+  const configured = r.perKm > 0;
+  return (
+    <Card className="mt-4" title={<><PiggyBank size={14} className="text-amber-400" /> Reserva de manutenção</>}
+      action={r.active ? <button type="button" className="label press rounded-full bg-white/[.05] px-3 py-1.5 text-slate-400 ring-1 ring-white/10" onClick={() => update('vehicles', v.id, { reserveStartKm: null, reserveStartDate: null })}>Desligar</button> : undefined}>
+      {!configured ? (
+        <p className="text-sm text-slate-400">Informe em <strong className="text-slate-200">Editar → Manutenção</strong> quanto custam a troca de óleo, os pneus e as revisões. O app calcula quanto guardar a cada km.</p>
+      ) : !r.active ? (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-300">Separe <strong className="font-mono text-amber-300">{formatBRL(r.perKm)}</strong> por km rodado ({formatBRL(r.perKm * 1000)} a cada 1.000 km).</p>
+          <Button onClick={async () => { if (await update('vehicles', v.id, { reserveStartKm: v.odometer, reserveStartDate: localISODate() })) toast('Reserva ativada a partir do hodômetro atual'); }}>Começar a contar agora ({formatNumber(v.odometer)} km)</Button>
+        </div>
+      ) : (
+        <>
+          <div className="mb-4 grid grid-cols-2 gap-3">
+            <div className={cx('rounded-[1.4rem] p-4 ring-1', r.balance >= 0 ? 'bg-amber-500/10 ring-amber-500/25' : 'bg-rose-500/10 ring-rose-500/25')}>
+              <p className={cx('label', r.balance >= 0 ? 'text-amber-300' : 'text-rose-300')}>Reserva acumulada</p>
+              <p className={cx('font-display text-2xl font-black', r.balance >= 0 ? 'text-amber-200' : 'text-rose-300')}>{formatBRL(r.balance)}</p>
+            </div>
+            <div className="rounded-[1.4rem] bg-white/[.03] p-4 ring-1 ring-white/5">
+              <p className="label text-slate-500">Desde {formatDate(r.since)}</p>
+              <p className="font-display text-xl font-black text-white">{formatNumber(r.km)} km</p>
+              <p className="text-[11px] text-slate-500">{formatBRL(r.perKm)}/km</p>
+            </div>
+          </div>
+          <ul className="space-y-2">
+            {r.buckets.filter((b) => b.perKm > 0 || b.spent > 0).map((b) => (
+              <li key={b.id} className="flex items-center gap-3 rounded-2xl bg-white/[.03] p-3 ring-1 ring-white/5">
+                <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white">{b.label}</span><span className="label text-slate-500">acumulou {formatBRL(b.accrued)} · gastou {formatBRL(b.spent)}</span></span>
+                <span className={cx('font-mono text-sm font-extrabold', b.balance >= 0 ? 'text-amber-300' : 'text-rose-400')}>{formatBRL(b.balance)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[11px] text-slate-500">Calculado pelos km do hodômetro. Gastos lançados neste veículo como Pneus, Troca de óleo e Manutenção saem da reserva. Saldo negativo: gastou mais do que tinha separado.</p>
+        </>
+      )}
+    </Card>
   );
 }

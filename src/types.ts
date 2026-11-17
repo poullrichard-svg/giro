@@ -88,6 +88,8 @@ export interface DriverSession {
   trips: number;
   kmDriven: number;
   hoursWorked: string; // HH:mm
+  /** Horário em que começou a trabalhar (HH:mm) — usado na análise de melhores horários. */
+  startTime?: string | null;
   fuelSpent: number;
   foodSpent: number;
   fuelConsumption: number;
@@ -121,6 +123,15 @@ export interface Vehicle {
   installmentsRemaining?: number | null;
   oilIntervalKm: number;
   lastOilChangeKm?: number | null;
+  /** Reserva de manutenção: custos para calcular quanto separar por km. */
+  oilChangeCost?: number | null;
+  tireSetCost?: number | null;
+  tireLifeKm?: number | null;
+  revisionCost?: number | null;
+  revisionIntervalKm?: number | null;
+  /** Hodômetro e data em que a reserva começou a ser contada. */
+  reserveStartKm?: number | null;
+  reserveStartDate?: string | null;
   notes?: string | null;
   active: boolean;
 }
