@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Field, MoneyInput, NumberInput } from '../../components/ui';
 import { formatBRL } from '../../lib/format';
 import { rentVsBuy } from '../../lib/finance';
-import { Big, CalcLayout, Tip, Verdict, toMonthly } from './common';
+import { Big, CalcLayout, Tip, Verdict, toMonthly, bindState } from './common';
 
 export default function RentVsBuy() {
   const [s, setS] = useState({ price: 400000, down: 80000, loanRate: 11.5, years: 30, ownerCosts: 350, rent: 2000, rentUp: 5, invest: 10, appreciation: 5, horizon: 10 });
@@ -15,6 +15,7 @@ export default function RentVsBuy() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'alugar-comprar', label: 'Alugar ou comprar', ...bindState({ s: [s, setS] }), summary: `Imóvel ${formatBRL(s.price)}, aluguel ${formatBRL(s.rent)}\nEm ${s.horizon} anos: ${r.better === 'comprar' ? 'comprar' : 'alugar'} sai na frente por ${formatBRL(r.difference)}`, goal: s.down > 0 ? { description: 'Entrada do imóvel', target: s.down } : null }}
       inputs={<>
         <Field label="Valor do imóvel"><MoneyInput value={s.price} onChange={(v) => set('price', v)} /></Field>
         <Field label="Entrada"><MoneyInput value={s.down} onChange={(v) => set('down', v)} /></Field>

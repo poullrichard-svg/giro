@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Field, MoneyInput } from '../../components/ui';
 import { formatBRL } from '../../lib/format';
 import { requiredMonthly, withdrawalPlan } from '../../lib/finance';
-import { Big, CalcLayout, RateField, TermField, Tip, toMonthly, toMonths } from './common';
+import { Big, CalcLayout, RateField, TermField, Tip, toMonthly, toMonths, bindState, monthsFromNow } from './common';
 
 export default function PassiveIncome() {
   const [wanted, setWanted] = useState(5000);
@@ -19,6 +19,7 @@ export default function PassiveIncome() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'renda', label: 'Independência financeira', ...bindState({ wanted: [wanted, setWanted], saved: [saved, setSaved], rate: [rate, setRate], period: [period, setPeriod], term: [term, setTerm], unit: [unit, setUnit] }), summary: `Renda de ${formatBRL(wanted)}/mês\nPrecisa de ${formatBRL(needed)} · guardar ${formatBRL(monthly)}/mês por ${n} meses`, goal: needed > 0 ? { description: 'Independência financeira', target: needed, current: saved, deadline: monthsFromNow(n) } : null }}
       inputs={<>
         <Field label="Renda mensal desejada"><MoneyInput value={wanted} onChange={setWanted} /></Field>
         <Field label="Patrimônio atual"><MoneyInput value={saved} onChange={setSaved} /></Field>

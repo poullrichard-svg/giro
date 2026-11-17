@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Field, MoneyInput, NumberInput } from '../../components/ui';
 import { formatBRL, formatPercent } from '../../lib/format';
 import { bazinCeiling, grahamFairPrice, safetyMargin } from '../../lib/finance';
-import { Big, CalcLayout, Tip, Verdict } from './common';
+import { Big, CalcLayout, Tip, Verdict, bindState } from './common';
 
 export default function Valuation() {
   const [price, setPrice] = useState(28);
@@ -19,6 +19,7 @@ export default function Valuation() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'preco-teto', label: 'Preço teto e preço justo', ...bindState({ price: [price, setPrice], dpa: [dpa, setDpa], minYield: [minYield, setMinYield], lpa: [lpa, setLpa], vpa: [vpa, setVpa] }), summary: `Preço ${formatBRL(price)} · teto Bazin ${formatBRL(teto)}${justo ? ` · justo Graham ${formatBRL(justo)}` : ''}\nDividend yield ${formatPercent(dy * 100)}`, goal: null }}
       inputs={<>
         <Field label="Preço atual da ação"><MoneyInput value={price} onChange={setPrice} /></Field>
         <Field label="Dividendos por ação (últimos 12 meses)" hint="DPA — some os proventos pagos no ano"><MoneyInput value={dpa} onChange={setDpa} /></Field>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Field, MoneyInput, Segmented } from '../../components/ui';
 import { formatBRL, formatNumber, formatPercent } from '../../lib/format';
 import { dividendPlan, monthsToTarget } from '../../lib/finance';
-import { Big, CalcLayout, Tip } from './common';
+import { Big, CalcLayout, Tip, bindState, monthsFromNow } from './common';
 
 export default function Dividends() {
   const [kind, setKind] = useState<'fii' | 'acao'>('fii');
@@ -17,6 +17,7 @@ export default function Dividends() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'dividendos', label: 'Viver de dividendos', ...bindState({ kind: [kind, setKind], price: [price, setPrice], dividend: [dividend, setDividend], target: [target, setTarget], have: [have, setHave], monthly: [monthly, setMonthly] }), summary: r ? `Renda de ${formatBRL(target)}/mês com ${kind === 'fii' ? 'FII' : 'ação'} a ${formatBRL(price)}\nPrecisa de ${formatBRL(r.capitalForTarget)} · número mágico ${r.magicNumber}` : 'Sem dados', goal: r ? { description: `Renda de ${formatBRL(target)}/mês em dividendos`, target: r.capitalForTarget, current: have, deadline: months ? monthsFromNow(months) : null } : null }}
       inputs={<>
         <Segmented value={kind} onChange={(k) => { setKind(k); setDividend(k === 'fii' ? 0.85 : 4.2); }} options={[{ value: 'fii', label: 'FII (mensal)' }, { value: 'acao', label: 'Ação (anual)' }]} />
         <Field label={kind === 'fii' ? 'Preço da cota' : 'Preço da ação'}><MoneyInput value={price} onChange={setPrice} /></Field>

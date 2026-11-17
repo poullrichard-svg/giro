@@ -3,7 +3,7 @@ import { Card, Field, MoneyInput, NumberInput, Segmented, Select } from '../../c
 import { useData } from '../../data/DataProvider';
 import { formatBRL } from '../../lib/format';
 import { driverCost, type DriverCostInput } from '../../lib/finance';
-import { Big, CalcLayout, Tip } from './common';
+import { Big, CalcLayout, Tip, bindState } from './common';
 
 const DEFAULT: DriverCostInput = {
   ownership: 'financed', vehicleValue: 70000, installment: 1500, monthlyKm: 5000, insuranceMonthly: 300, ipvaAnnual: 2800, licensingAnnual: 160,
@@ -27,6 +27,7 @@ export default function DriverCost() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'custo-km', label: 'Custo por km', ...bindState({ s: [s, setS], vehicleId: [vehicleId, setVehicleId] }), summary: `${s.monthlyKm} km/mês · custo ${formatBRL(r.costPerKm)}/km\nCobrar no mínimo ${formatBRL(r.minRatePerKm)}/km`, goal: null }}
       inputs={<>
         {data.vehicles.length > 0 && <Field label="Preencher com meu veículo"><Select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} options={[{ value: '', label: '—' }, ...data.vehicles.map((v) => ({ value: v.id, label: `${v.name} · ${v.plate}` }))]} /></Field>}
         <Segmented value={s.ownership} onChange={(v) => set('ownership', v)} options={[{ value: 'owned', label: 'Quitado' }, { value: 'financed', label: 'Financiado' }, { value: 'rented', label: 'Alugado' }]} />

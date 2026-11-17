@@ -3,7 +3,7 @@ import { Card, Field, MoneyInput, Segmented } from '../../components/ui';
 import { Line } from '../../components/charts';
 import { formatBRL } from '../../lib/format';
 import { compound, monthsToTarget, requiredMonthly } from '../../lib/finance';
-import { Big, CalcLayout, RateField, TermField, Tip, toMonthly, toMonths } from './common';
+import { Big, CalcLayout, RateField, TermField, Tip, toMonthly, toMonths, bindState, monthsFromNow } from './common';
 
 const yearsMonths = (m: number) => `${Math.floor(m / 12)} anos${m % 12 ? ` e ${m % 12} meses` : ''}`;
 
@@ -26,6 +26,7 @@ export default function Compound() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'juros', label: 'Juros compostos', ...bindState({ mode: [mode, setMode], initial: [initial, setInitial], monthly: [monthly, setMonthly], rate: [rate, setRate], period: [period, setPeriod], term: [term, setTerm], unit: [unit, setUnit], target: [target, setTarget] }), summary: mode === 'simular' ? `${formatBRL(initial)} + ${formatBRL(monthly)}/mês a ${rate}% ${period === 'ano' ? 'a.a.' : 'a.m.'} por ${n} meses\nTotal ${formatBRL(sim.final)} (juros ${formatBRL(sim.interest)})` : mode === 'quando' ? `Meta ${formatBRL(target)} guardando ${formatBRL(monthly)}/mês\n${when == null ? 'Não chega em 100 anos' : `Chega em ${when} meses`}` : `Meta ${formatBRL(target)} em ${n} meses\nGuardar ${formatBRL(need)}/mês`, goal: mode === 'simular' ? { description: 'Objetivo de investimento', target: sim.final, current: initial, deadline: monthsFromNow(n) } : { description: `Juntar ${formatBRL(target)}`, target, current: initial, deadline: mode === 'quando' ? (when ? monthsFromNow(when) : null) : monthsFromNow(n) } }}
       inputs={<>
         <Segmented value={mode} onChange={setMode} options={[{ value: 'simular', label: 'Simular' }, { value: 'quando', label: 'Quando chego?' }, { value: 'quanto', label: 'Quanto investir?' }]} />
         {mode !== 'simular' && <Field label="Meta (ex.: primeiro milhão)"><MoneyInput value={target} onChange={setTarget} /></Field>}

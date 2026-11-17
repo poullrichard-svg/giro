@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Field, MoneyInput, NumberInput, Segmented } from '../../components/ui';
 import { formatBRL, formatPercent } from '../../lib/format';
 import { convertRate, inflationAdjusted, purchasingPower, realRate } from '../../lib/finance';
-import { Big, CalcLayout, Tip } from './common';
+import { Big, CalcLayout, Tip, bindState, useRates, useRateSync, RatesBar } from './common';
 
 const PERIODS = { dia: 252, mes: 12, ano: 1 } as const;
 type P = keyof typeof PERIODS;
@@ -11,6 +11,10 @@ export default function RatesInflation() {
   const [mode, setMode] = useState<'real' | 'converter' | 'poder'>('real');
   const [nominal, setNominal] = useState(12);
   const [ipca, setIpca] = useState(4.5);
+  const rt = useRates();
+  const markRates = useRateSync(() => { setIpca(rt.rates.ipca); setNominal(rt.rates.cdi); }, [rt.rates.ipca, rt.rates.cdi]);
+  const setIpcaU = (v: number) => { markRates(); setIpca(v); };
+  const setNominalU = (v: number) => { markRates(); setNominal(v); };
   const [rate, setRate] = useState(1);
   const [from, setFrom] = useState<P>('mes');
   const [value, setValue] = useState(1000);
@@ -20,11 +24,13 @@ export default function RatesInflation() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'inflacao', label: 'Inflação e taxas', ...bindState({ mode: [mode, setMode], nominal: [nominal, setNominalU], ipca: [ipca, setIpcaU], rate: [rate, setRate], from: [from, setFrom], value: [value, setValue], years: [years, setYears] }), summary: `Rende ${nominal}% com IPCA de ${ipca}%\nGanho real ${formatPercent(real * 100)} ao ano`, goal: null }}
       inputs={<>
+        <RatesBar r={rt} />
         <Segmented value={mode} onChange={setMode} options={[{ value: 'real', label: 'Ganho real' }, { value: 'converter', label: 'Converter' }, { value: 'poder', label: 'Poder de compra' }]} />
         {mode === 'real' && <>
-          <Field label="Rentabilidade do investimento"><NumberInput value={nominal} onChange={setNominal} suffix="% a.a." /></Field>
-          <Field label="Inflação (IPCA)"><NumberInput value={ipca} onChange={setIpca} suffix="% a.a." /></Field>
+          <Field label="Rentabilidade do investimento" hint="Começa com o CDI atual"><NumberInput value={nominal} onChange={setNominalU} suffix="% a.a." /></Field>
+          <Field label="Inflação (IPCA)"><NumberInput value={ipca} onChange={setIpcaU} suffix="% a.a." /></Field>
         </>}
         {mode === 'converter' && <>
           <Field label="Taxa"><NumberInput value={rate} onChange={setRate} suffix="%" /></Field>
@@ -32,7 +38,7 @@ export default function RatesInflation() {
         </>}
         {mode === 'poder' && <>
           <Field label="Valor"><MoneyInput value={value} onChange={setValue} /></Field>
-          <Field label="Inflação média"><NumberInput value={ipca} onChange={setIpca} suffix="% a.a." /></Field>
+          <Field label="Inflação média"><NumberInput value={ipca} onChange={setIpcaU} suffix="% a.a." /></Field>
           <Field label="Daqui a quantos anos"><NumberInput value={years} onChange={setYears} suffix="anos" /></Field>
         </>}
       </>}

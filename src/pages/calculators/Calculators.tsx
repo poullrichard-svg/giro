@@ -1,8 +1,10 @@
 import { lazy, Suspense } from 'react';
 import {
-  ArrowLeft, Banknote, Calculator, Car, CreditCard, Gem, Home, KeyRound, Layers, LineChart, Percent, PiggyBank, Shield, Sunset, Users,
+  ArrowLeft, Banknote, History, Calculator, Car, CreditCard, Gem, Home, KeyRound, Layers, LineChart, Percent, PiggyBank, Shield, Sunset, Users,
 } from 'lucide-react';
-import { IconChip, PageHeader, Tilt, type Tone } from '../../components/ui';
+import { ConfirmDelete, IconChip, PageHeader, Row, Tilt, type Tone } from '../../components/ui';
+import { useData } from '../../data/DataProvider';
+import { RatesBar, openSimulation, useRates } from './common';
 import { go } from '../../router';
 
 interface Calc { id: string; label: string; desc: string; icon: typeof Home; tone: Tone; C: ReturnType<typeof lazy> }
@@ -46,6 +48,8 @@ const ALL = GROUPS.flatMap((g) => g.items);
 
 export default function Calculators({ tab }: { tab?: string }) {
   const current = ALL.find((t) => t.id === tab);
+  const { data, remove } = useData();
+  const rates = useRates();
 
   if (current) {
     const C = current.C;
@@ -67,6 +71,23 @@ export default function Calculators({ tab }: { tab?: string }) {
   return (
     <div>
       <PageHeader eyebrow="Simulações" title="Calculadoras" subtitle={`${ALL.length} ferramentas para decidir com números`} />
+      <div className="mb-6"><RatesBar r={rates} /></div>
+      {data.simulations.length > 0 && (
+        <section className="mb-8">
+          <h2 className="label mb-3 flex items-center gap-2 text-slate-400"><History size={13} /> Simulações salvas</h2>
+          <ul className="stagger grid gap-2.5 md:grid-cols-2">
+            {data.simulations.slice(0, 6).map((x) => {
+              const c = ALL.find((k) => k.id === x.calc);
+              if (!c) return null;
+              return (
+                <Row key={x.id} tone={c.tone} icon={<c.icon size={17} />} title={x.title} subtitle={x.summary.split('\n')[1] ?? x.summary}
+                  onClick={() => { openSimulation(x.calc, x.values); go('calculadoras', x.calc); }}
+                  actions={<ConfirmDelete onConfirm={() => remove('simulations', x.id)} />} />
+              );
+            })}
+          </ul>
+        </section>
+      )}
       <div className="space-y-8">
         {GROUPS.map((g) => (
           <section key={g.title}>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Field, MoneyInput, NumberInput, Segmented } from '../../components/ui';
 import { formatBRL, formatPercent } from '../../lib/format';
 import { cashVsInstallments, monthlyToAnnual } from '../../lib/finance';
-import { Big, CalcLayout, RateField, Tip, Verdict, toMonthly } from './common';
+import { Big, CalcLayout, RateField, Tip, Verdict, toMonthly, bindState } from './common';
 
 export default function CashVsInstallments() {
   const [cash, setCash] = useState(1800);
@@ -15,6 +15,7 @@ export default function CashVsInstallments() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'avista-parcelado', label: 'À vista ou parcelado', ...bindState({ cash: [cash, setCash], inst: [inst, setInst], count: [count, setCount], firstNow: [firstNow, setFirstNow], rate: [rate, setRate], period: [period, setPeriod] }), summary: `À vista ${formatBRL(cash)} × ${count}x de ${formatBRL(inst)}\n${r.better === 'avista' ? 'Compensa à vista' : 'Compensa parcelar'} (vantagem ${formatBRL(r.advantage)})`, goal: r.better === 'avista' ? { description: 'Juntar para comprar à vista', target: cash } : null }}
       inputs={<>
         <Field label="Preço à vista (com desconto)"><MoneyInput value={cash} onChange={setCash} /></Field>
         <div className="grid grid-cols-2 gap-3">

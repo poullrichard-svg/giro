@@ -3,7 +3,7 @@ import { Plus, X } from 'lucide-react';
 import { Card, Field, IconButton, Input, MoneyInput, NumberInput, cx } from '../../components/ui';
 import { formatBRL, formatPercent } from '../../lib/format';
 import { fixedIncomeComparison } from '../../lib/finance';
-import { CalcLayout, TermField, Tip, toMonths } from './common';
+import { CalcLayout, TermField, Tip, toMonths, bindState, useRates, useRateSync, RatesBar } from './common';
 
 export default function FixedIncome() {
   const [amount, setAmount] = useState(10000);
@@ -11,6 +11,10 @@ export default function FixedIncome() {
   const [unit, setUnit] = useState<'meses' | 'anos'>('anos');
   const [cdi, setCdi] = useState(14.9);
   const [selic, setSelic] = useState(15);
+  const rt = useRates();
+  const markRates = useRateSync(() => { setCdi(rt.rates.cdi); setSelic(rt.rates.selic); }, [rt.rates.cdi, rt.rates.selic]);
+  const setCdiU = (v: number) => { markRates(); setCdi(v); };
+  const setSelicU = (v: number) => { markRates(); setSelic(v); };
   const [tr, setTr] = useState(0.17);
   const [products, setProducts] = useState([
     { name: 'CDB 100% CDI', pct: 100, taxFree: false },
@@ -24,15 +28,17 @@ export default function FixedIncome() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'rendimento', label: 'Renda fixa', ...bindState({ amount: [amount, setAmount], term: [term, setTerm], unit: [unit, setUnit], cdi: [cdi, setCdiU], selic: [selic, setSelicU], tr: [tr, setTr], products: [products, setProducts] }), summary: `${formatBRL(amount)} por ${months} meses (CDI ${cdi}%)\nMelhor: ${r.results[0]?.name} → ${formatBRL(r.results[0]?.final ?? 0)}`, goal: null }}
       inputs={<>
+        <RatesBar r={rt} />
         <Field label="Valor investido"><MoneyInput value={amount} onChange={setAmount} /></Field>
         <TermField value={term} onChange={setTerm} unit={unit} onUnit={setUnit} />
         <div className="grid grid-cols-3 gap-2">
-          <Field label="CDI a.a."><NumberInput value={cdi} onChange={setCdi} suffix="%" /></Field>
-          <Field label="Selic a.a."><NumberInput value={selic} onChange={setSelic} suffix="%" /></Field>
+          <Field label="CDI a.a."><NumberInput value={cdi} onChange={setCdiU} suffix="%" /></Field>
+          <Field label="Selic a.a."><NumberInput value={selic} onChange={setSelicU} suffix="%" /></Field>
           <Field label="TR a.m."><NumberInput value={tr} onChange={setTr} suffix="%" /></Field>
         </div>
-        <p className="text-[11px] text-slate-500">Ajuste CDI/Selic/TR com as taxas do dia (site do Banco Central).</p>
+        <p className="text-[11px] text-slate-500">CDI e Selic vêm do Banco Central; a TR você ajusta à mão.</p>
         <div className="space-y-2">
           <p className="text-xs font-medium text-slate-400">Investimentos para comparar</p>
           {products.map((p, i) => (

@@ -3,7 +3,7 @@ import { Plus, X } from 'lucide-react';
 import { Button, Field, IconButton, MoneyInput, NumberInput } from '../../components/ui';
 import { formatBRL, formatNumber, formatPercent } from '../../lib/format';
 import { averagePrice, type Lot } from '../../lib/finance';
-import { Big, CalcLayout, Tip } from './common';
+import { Big, CalcLayout, Tip, bindState } from './common';
 
 export default function AveragePrice() {
   const [lots, setLots] = useState<Lot[]>([{ qty: 100, price: 25, fees: 0 }, { qty: 50, price: 22, fees: 0 }]);
@@ -15,6 +15,7 @@ export default function AveragePrice() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'preco-medio', label: 'Preço médio', ...bindState({ lots: [lots, setLots], current: [current, setCurrent] }), summary: `${formatNumber(r.qty)} unidades · preço médio ${formatBRL(r.average)}\nInvestido ${formatBRL(r.cost)}`, goal: null }}
       inputs={<>
         <p className="label text-slate-500">Suas compras</p>
         <div className="space-y-2.5">

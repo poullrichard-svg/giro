@@ -201,3 +201,12 @@ export interface Attachment {
   height: number;
   bytes: number;
 }
+
+/** Simulação salva de uma calculadora (valores digitados + resumo do resultado). */
+export interface Simulation {
+  id: string;
+  calc: string;
+  title: string;
+  values: Record<string, unknown>;
+  summary: string;
+}

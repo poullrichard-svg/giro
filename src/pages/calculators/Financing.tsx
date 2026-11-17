@@ -3,7 +3,7 @@ import { Card, Field, MoneyInput, Segmented } from '../../components/ui';
 import { Line } from '../../components/charts';
 import { formatBRL, formatPercent } from '../../lib/format';
 import { loan, monthlyToAnnual } from '../../lib/finance';
-import { Big, CalcLayout, RateField, TermField, Tip, toMonthly, toMonths } from './common';
+import { Big, CalcLayout, RateField, TermField, Tip, toMonthly, toMonths, bindState } from './common';
 
 interface Sim { price: number; down: number; rate: number; period: 'mes' | 'ano'; term: number; unit: 'meses' | 'anos'; extras: number; system: 'price' | 'sac' }
 const PRESETS: Record<'veiculo' | 'imovel', Sim> = {
@@ -26,6 +26,7 @@ export default function Financing() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'financiamento', label: 'Financiamento', ...bindState({ kind: [kind, setKind], s: [s, setS] }), summary: `${kind === 'imovel' ? 'Imóvel' : 'Veículo'} de ${formatBRL(s.price)}, entrada ${formatBRL(s.down)}\n${n}x (${s.system === 'price' ? 'Price' : 'SAC'}) · 1ª parcela ${formatBRL(r.firstInstallment)} · juros ${formatBRL(r.totalInterest)}`, goal: s.down > 0 ? { description: `Entrada do ${kind === 'imovel' ? 'imóvel' : 'veículo'}`, target: s.down } : null }}
       inputs={<>
         <Segmented value={kind} onChange={(k) => { setKind(k); setS(PRESETS[k]); }} options={[{ value: 'veiculo', label: 'Veículo' }, { value: 'imovel', label: 'Imóvel' }]} />
         <Field label={kind === 'imovel' ? 'Valor do imóvel' : 'Valor do veículo'}><MoneyInput value={s.price} onChange={(v) => set('price', v)} /></Field>

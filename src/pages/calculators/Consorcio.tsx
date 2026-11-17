@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Card, Field, MoneyInput, NumberInput, Segmented } from '../../components/ui';
 import { formatBRL, formatPercent } from '../../lib/format';
 import { consorcio, loan, monthlyToAnnual } from '../../lib/finance';
-import { Big, CalcLayout, Tip } from './common';
+import { Big, CalcLayout, Tip, bindState } from './common';
 
 export default function Consorcio() {
   const [s, setS] = useState({ credit: 100000, months: 80, admin: 16, reserve: 2, insurance: 0.04, adjust: 4.5, bid: 0, embedded: false, finRate: 1.7 });
@@ -12,6 +12,7 @@ export default function Consorcio() {
 
   return (
     <CalcLayout
+      sim={{ calc: 'consorcio', label: 'Consórcio', ...bindState({ s: [s, setS] }), summary: `Carta de ${formatBRL(s.credit)} em ${s.months}x\nParcela ${formatBRL(r.installment)} · total ${formatBRL(r.totalWithAdjust)}`, goal: r.ownCashForBid > 0 ? { description: 'Lance do consórcio', target: r.ownCashForBid } : null }}
       inputs={<>
         <Field label="Valor da carta de crédito"><MoneyInput value={s.credit} onChange={(v) => set('credit', v)} /></Field>
         <Field label="Prazo"><NumberInput value={s.months} onChange={(v) => set('months', Math.round(v))} suffix="meses" /></Field>
