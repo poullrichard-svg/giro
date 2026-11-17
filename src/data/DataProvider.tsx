@@ -12,7 +12,7 @@ const byCreatedAsc = (a: any, b: any) => (a.createdAt ?? '').localeCompare(b.cre
 const SORT: Record<CollectionKey, (a: any, b: any) => number> = {
   transactions: byDateDesc, sessions: byDateDesc, vehicleExpenses: byDateDesc,
   goals: byCreatedDesc, shopping: byCreatedDesc, fixedPayments: byCreatedDesc,
-  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc, accounts: byCreatedAsc, cards: byCreatedAsc, budgets: byCreatedAsc, attachments: byCreatedAsc, simulations: byCreatedDesc,
+  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc, accounts: byCreatedAsc, cards: byCreatedAsc, budgets: byCreatedAsc, attachments: byCreatedAsc, simulations: byCreatedDesc, goalContributions: byDateDesc,
 };
 
 interface DataApi {
@@ -125,6 +125,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ops.put!.sessions = data.sessions.filter((s) => s.vehicleId === id).map((s) => ({ ...s, vehicleId: null }));
       ops.put!.transactions = data.transactions.filter((t) => t.vehicleId === id).map((t) => ({ ...t, vehicleId: null }));
     }
+    if (k === 'goals') ops.del!.goalContributions = (data.goalContributions as any[]).filter((c) => c.goalId === id).map((c) => c.id);
     if (k === 'fixed') ops.del!.fixedPayments = data.fixedPayments.filter((p) => p.fixedId === id).map((p) => p.id);
     return commit(ops);
   }, [commit, data]);

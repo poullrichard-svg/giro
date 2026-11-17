@@ -156,6 +156,18 @@ export interface Goal {
   currentAmount: number;
   type: GoalType;
   deadline?: string | null;
+  /** Ícone (nome da lista GOAL_ICONS) e cor escolhidos pelo usuário. */
+  icon?: string | null;
+  color?: string | null;
+}
+
+/** Aporte (positivo) ou retirada (negativo) numa meta. */
+export interface GoalContribution {
+  id: string;
+  goalId: string;
+  amount: number;
+  date: string;
+  note?: string | null;
 }
 
 export interface ShoppingItem {

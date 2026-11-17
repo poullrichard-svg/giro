@@ -44,7 +44,7 @@ export default function Shell() {
 
   const page: Record<Route, ReactNode> = {
     inicio: <Dashboard />, lancamentos: <Transactions />, contas: <Accounts id={param} />, fixas: <FixedBills />, motorista: <Driver />,
-    veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, metas: <Goals />, compras: <Shopping />, mais: <More />,
+    veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, metas: <Goals id={param} />, compras: <Shopping />, mais: <More />,
   };
 
   const loader = <div className="flex flex-col items-center gap-3 py-24 text-slate-400"><Logo size={48} spin /><span className="label">Abrindo seus dados</span></div>;

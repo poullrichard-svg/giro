@@ -160,3 +160,9 @@ select option { background: #13111f; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
 @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(16deg); } 20%, 40% { transform: rotate(-10deg); } }
+
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(var(--rot)); opacity: 1; }
+  100% { transform: translate3d(var(--drift), 110vh, 0) rotate(calc(var(--rot) + 720deg)); opacity: .9; }
+}
+.confetti { animation: confetti-fall 3s cubic-bezier(.25,.6,.4,1) both; }
