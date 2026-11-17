@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CreditCard, Landmark, Sparkles, Wallet } from 'lucide-react';
+import { Camera, Copy, CreditCard, ImagePlus, Landmark, Sparkles, Wallet, X } from 'lucide-react';
+import { compressImage, type CompressedImage } from '../lib/image';
 import type { Transaction, TxType } from '../types';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
@@ -12,13 +13,14 @@ import { budgetAlert } from '../lib/planning';
 import { newId } from '../data/db';
 import { Button, Field, Input, Modal, MoneyInput, NumberInput, Segmented, Select, cx } from './ui';
 
-export interface TxPreset { type?: TxType; text?: string; editing?: Transaction }
+/** `duplicate`: abre um novo lançamento com os dados de outro (data de hoje, sem foto). */
+export interface TxPreset { type?: TxType; text?: string; editing?: Transaction; duplicate?: Transaction }
 
 type Form = { type: TxType; amount: number; description: string; category: string; paymentMethod: string; date: string; vehicleId: string; source: string; installments: number };
 type Field_ = 'amount' | 'description' | 'date' | 'source' | 'installments';
 
-export default function TransactionForm({ open, onClose, preset }: { open: boolean; onClose: () => void; preset?: TxPreset }) {
-  const { insert, update, data } = useData();
+export default function TransactionForm({ open, onClose, preset, onDuplicate }: { open: boolean; onClose: () => void; preset?: TxPreset; onDuplicate?: (t: Transaction) => void }) {
+  const { insert, update, remove, data } = useData();
   const toast = useToast();
   const accounts = data.accounts.filter((a) => !a.archived);
   const cards = data.cards.filter((c) => !c.archived);
@@ -31,11 +33,23 @@ export default function TransactionForm({ open, onClose, preset }: { open: boole
   useEffect(() => { setErrors({}); }, [f]);
   const [busy, setBusy] = useState(false);
   const editing = preset?.editing;
+  // Comprovante: foto nova (ainda não salva), a já salva, ou removida.
+  const [photo, setPhoto] = useState<CompressedImage | null>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const savedPhoto = editing?.attachmentId && !photoRemoved ? data.attachments.find((a) => a.id === editing.attachmentId) : undefined;
+  const shownPhoto = photo?.dataUrl ?? savedPhoto?.dataUrl;
+  const [duplicateOf, setDuplicateOf] = useState<Transaction | undefined>();
 
   useEffect(() => {
     if (!open) return;
-    setErrors({});
-    if (editing) {
+    setErrors({}); setPhoto(null); setPhotoRemoved(false);
+    const dup = preset?.duplicate;
+    setDuplicateOf(dup);
+    if (dup) {
+      setF({ type: dup.type, amount: dup.installmentCount ? dup.amount * dup.installmentCount : dup.amount, description: dup.description.replace(/ \(\d+\/\d+\)$/, ''), category: dup.category, paymentMethod: dup.paymentMethod, date: localISODate(),
+        vehicleId: dup.vehicleId ?? '', source: dup.cardId ? `card:${dup.cardId}` : dup.accountId ? `acc:${dup.accountId}` : defaultSource, installments: dup.installmentCount ?? 1 });
+    } else if (editing) {
       setF({ type: editing.type, amount: editing.amount, description: editing.description, category: editing.category, paymentMethod: editing.paymentMethod, date: editing.date,
         vehicleId: editing.vehicleId ?? '', source: editing.cardId ? `card:${editing.cardId}` : editing.accountId ? `acc:${editing.accountId}` : defaultSource, installments: 1 });
     } else setF(blank(preset?.type));
@@ -77,7 +91,13 @@ export default function TransactionForm({ open, onClose, preset }: { open: boole
     if (hasErrors(e)) { toast('Confira os campos destacados', 'error'); return; }
     setBusy(true);
     const description = f.description.trim() || f.category;
-    const base = { type: f.type, amount: f.amount, description, category: f.category, date: f.date, vehicleId: f.vehicleId || null };
+    let attachmentId: string | null | undefined = undefined; // undefined = não mexe
+    if (photo) {
+      const att = await insert('attachments', { dataUrl: photo.dataUrl, width: photo.width, height: photo.height, bytes: photo.bytes });
+      if (!att) { setBusy(false); return; }
+      attachmentId = att[0].id;
+    } else if (photoRemoved) attachmentId = null;
+    const base = { type: f.type, amount: f.amount, description, category: f.category, date: f.date, vehicleId: f.vehicleId || null, ...(attachmentId !== undefined ? { attachmentId } : {}) };
     let ok = false;
     if (editing) {
       const patch: Partial<Transaction> = card
@@ -87,6 +107,9 @@ export default function TransactionForm({ open, onClose, preset }: { open: boole
             ...(isInstallment ? { description: editing.description.replace(/ \(\d+\/\d+\)$/, '') === description ? editing.description : description } : {}) }
         : { ...base, paymentMethod: f.paymentMethod, accountId: f.source.slice(4), cardId: null, invoiceMonth: null };
       ok = await update('transactions', editing.id, patch);
+      // Foto trocada/removida: apaga a antiga se ninguém mais usa.
+      const old = editing.attachmentId;
+      if (ok && old && attachmentId !== undefined && attachmentId !== old && !data.transactions.some((t) => t.id !== editing.id && t.attachmentId === old)) await remove('attachments', old);
     } else if (card) {
       ok = !!(await insert('transactions', cardPurchase({ description, amount: f.amount, category: f.category, date: f.date, card, installments: f.installments, group: newId() }).map((p) => ({ ...p, vehicleId: base.vehicleId }))));
     } else {
@@ -101,7 +124,7 @@ export default function TransactionForm({ open, onClose, preset }: { open: boole
       if (alert) setTimeout(() => toast(alert.text, alert.kind), 400);
     }
     if (ok) {
-      toast(editing ? 'Lançamento atualizado' : card && f.installments > 1 ? `Compra de ${formatBRL(f.amount)} em ${f.installments}x lançada` : `${f.type === 'income' ? 'Receita' : 'Despesa'} de ${formatBRL(f.amount)} lançada`);
+      toast(editing ? 'Lançamento atualizado' : duplicateOf ? 'Lançamento duplicado' : card && f.installments > 1 ? `Compra de ${formatBRL(f.amount)} em ${f.installments}x lançada` : `${f.type === 'income' ? 'Receita' : 'Despesa'} de ${formatBRL(f.amount)} lançada`);
       onClose();
     }
   };
@@ -112,10 +135,14 @@ export default function TransactionForm({ open, onClose, preset }: { open: boole
   ];
 
   return (
-    <Modal open={open} onClose={onClose} title={editing ? 'Editar lançamento' : 'Novo lançamento'}
-      footer={<Button className="w-full" disabled={busy} onClick={save}>{busy ? 'Salvando…' : 'Salvar'}</Button>}>
+    <Modal open={open} onClose={onClose} title={editing ? 'Editar lançamento' : duplicateOf ? 'Duplicar lançamento' : 'Novo lançamento'}
+      footer={
+        <div className={cx('grid gap-2.5', editing && 'grid-cols-[auto_1fr]')}>
+          {editing && <Button variant="soft" onClick={() => { const t = editing; onClose(); setTimeout(() => onDuplicate?.(t), 50); }}><Copy size={15} /> Duplicar</Button>}
+          <Button className="w-full" disabled={busy || photoBusy} onClick={save}>{busy ? 'Salvando…' : 'Salvar'}</Button>
+        </div>}>
       <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
-        {!editing && (
+        {!editing && !duplicateOf && (
           <Field label="Lançamento rápido" hint='Ex.: "gastei 35 almoço no pix", "recebi 1200 salário", "abasteci 150 ontem"'>
             <div className="relative">
               <Sparkles size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-400" />
@@ -160,6 +187,30 @@ export default function TransactionForm({ open, onClose, preset }: { open: boole
           </div>
         )}
         <Field label={card ? 'Data da compra' : 'Data'} error={errors.date} hint={invoiceHint ?? undefined}><Input type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></Field>
+        <Field label="Comprovante (opcional)" group hint="A foto fica guardada no aparelho, comprimida.">
+          {shownPhoto ? (
+            <div className="relative w-fit">
+              <img src={shownPhoto} alt="Comprovante" className="max-h-48 rounded-2xl ring-1 ring-white/10" />
+              <button type="button" aria-label="Remover foto" onClick={() => { setPhoto(null); setPhotoRemoved(true); }} className="press absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg"><X size={16} /></button>
+              {photo && <p className="label mt-1.5 text-slate-500">{Math.round(photo.bytes / 1024)} KB</p>}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {[{ label: 'Tirar foto', icon: Camera, capture: true }, { label: 'Galeria', icon: ImagePlus, capture: false }].map((o) => (
+                <label key={o.label} className={cx('press flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl bg-white/[.05] text-[12px] font-extrabold uppercase tracking-[.08em] text-slate-200 ring-1 ring-inset ring-white/10 hover:bg-white/10', photoBusy && 'opacity-50')}>
+                  <o.icon size={16} /> {photoBusy ? 'Processando…' : o.label}
+                  <input type="file" accept="image/*" {...(o.capture ? { capture: 'environment' } : {})} hidden disabled={photoBusy}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]; e.target.value = '';
+                      if (!file) return;
+                      setPhotoBusy(true);
+                      try { setPhoto(await compressImage(file)); setPhotoRemoved(false); } catch (err: any) { toast(err.message, 'error'); } finally { setPhotoBusy(false); }
+                    }} />
+                </label>
+              ))}
+            </div>
+          )}
+        </Field>
         {showVehicle && (
           <Field label="Veículo (opcional)">
             <Select value={f.vehicleId} onChange={(e) => set('vehicleId', e.target.value)} options={[{ value: '', label: '—' }, ...vehicles.map((v) => ({ value: v.id, label: [v.name, v.plate].filter(Boolean).join(' · ') }))]} />

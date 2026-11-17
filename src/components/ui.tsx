@@ -6,7 +6,7 @@ import { formatBRL } from '../lib/format';
 export const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(' ');
 
 /** Junta classes base + extras; se o extra define largura/altura/tamanho de texto, a base cede. */
-const GROUPS = [/^w-/, /^min-h-/, /^h-/, /^text-(xs|sm|base|lg|xl|\d)/, /^py-/, /^rounded/];
+const GROUPS = [/^w-/, /^min-h-/, /^h-/, /^text-(xs|sm|base|lg|xl|\d)/, /^py-/, /^rounded/, /^(hidden|block|inline-block|flex|inline-flex|grid)$/];
 export const merge = (base: string, extra?: string) => {
   if (!extra) return base;
   const ex = extra.split(/\s+/);
@@ -113,7 +113,8 @@ export function Button({ variant = 'primary', className, ...p }: ButtonHTMLAttri
 }
 
 export function IconButton({ label, className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
-  return <button aria-label={label} title={label} {...p} className={cx('press inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[.04] text-slate-400 ring-1 ring-inset ring-white/5 hover:bg-white/10 hover:text-white', className)} />;
+  // merge: um `hidden` vindo de fora vence o `inline-flex` padrão (senão o botão aparece no celular).
+  return <button aria-label={label} title={label} {...p} className={merge('press inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[.04] text-slate-400 ring-1 ring-inset ring-white/5 hover:bg-white/10 hover:text-white', className)} />;
 }
 
 /**
@@ -278,8 +279,8 @@ export function MiniStat({ label, value, money, sub, tone }: { label: string; va
 }
 
 /** Item de lista em formato de cartão. */
-export function Row({ icon, tone = 'brand', title, subtitle, amount, amountTone, actions, onClick, muted, leading }: {
-  icon?: ReactNode; tone?: Tone | string; title: ReactNode; subtitle?: ReactNode; amount?: ReactNode; amountTone?: 'good' | 'bad' | 'muted';
+export function Row({ icon, tone = 'brand', title, subtitle, amount, amountTone, actions, onClick, muted, leading, amountClassName }: {
+  icon?: ReactNode; tone?: Tone | string; title: ReactNode; subtitle?: ReactNode; amount?: ReactNode; amountTone?: 'good' | 'bad' | 'muted'; amountClassName?: string;
   actions?: ReactNode; onClick?: () => void; muted?: boolean; leading?: ReactNode;
 }) {
   return (
@@ -290,7 +291,7 @@ export function Row({ icon, tone = 'brand', title, subtitle, amount, amountTone,
         <p className={cx('truncate font-display text-[15px] font-extrabold text-white', muted && 'line-through decoration-2')}>{title}</p>
         {subtitle && <p className="label mt-1 truncate !tracking-[.12em] text-slate-500">{subtitle}</p>}
       </button>
-      {amount !== undefined && <span className={cx('whitespace-nowrap font-mono text-sm font-extrabold', amountTone === 'good' ? 'text-emerald-400' : amountTone === 'bad' ? 'text-rose-400' : 'text-slate-200')}>{amount}</span>}
+      {amount !== undefined && <span className={cx('whitespace-nowrap font-mono text-sm font-extrabold', amountTone === 'good' ? 'text-emerald-400' : amountTone === 'bad' ? 'text-rose-400' : 'text-slate-200', amountClassName)}>{amount}</span>}
       {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
     </li>
   );

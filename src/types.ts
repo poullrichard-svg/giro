@@ -23,6 +23,10 @@ export interface Transaction {
    */
   internal?: 'transfer' | 'invoice-payment' | 'fixed-payment' | null;
   transferGroup?: string | null;
+  /** Identificador do banco (FITID do OFX) — evita importar o mesmo lançamento duas vezes. */
+  externalId?: string | null;
+  /** Foto do comprovante (coleção "attachments"). */
+  attachmentId?: string | null;
 }
 
 export type AccountKind = 'corrente' | 'poupanca' | 'carteira' | 'investimento' | 'outro';
@@ -175,4 +179,14 @@ export interface Budget {
   id: string;
   category: string;
   limit: number;
+}
+
+/** Foto de comprovante, já comprimida (JPEG em data URL). */
+export interface Attachment {
+  id: string;
+  transactionId?: string | null;
+  dataUrl: string;
+  width: number;
+  height: number;
+  bytes: number;
 }

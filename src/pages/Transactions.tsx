@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowDownCircle, ArrowUp, ArrowUpCircle, Download, Pencil, Scale, Search, Wallet } from 'lucide-react';
+import { Modal } from '../components/ui';
+import { ArrowDown, ArrowDownCircle, ArrowUp, ArrowUpCircle, Copy, Download, FileUp, Paperclip, Pencil, Scale, Search, Wallet } from 'lucide-react';
+import { ImportStatement } from '../components/ImportStatement';
 import { useData } from '../data/DataProvider';
 import { useQuickAdd } from '../components/Shell';
 import { Button, Card, ConfirmDelete, Empty, IconButton, Input, PageHeader, PeriodNav, Row, Segmented, Select, Stat, cx } from '../components/ui';
@@ -10,6 +12,9 @@ import { txMonth } from '../lib/cards';
 
 export default function Transactions() {
   const { data, remove } = useData();
+  const [importOpen, setImportOpen] = useState(false);
+  const [viewing, setViewing] = useState<string | null>(null);
+  const viewingPhoto = viewing ? data.attachments.find((a) => a.id === viewing) : undefined;
   const accName = new Map(data.accounts.map((a) => [a.id, a.name]));
   const cardName = new Map(data.cards.map((c) => [c.id, c.name]));
   const sourceLabel = (t: Transaction) => {
@@ -45,6 +50,7 @@ export default function Transactions() {
       <PageHeader eyebrow="Extrato" title="Lançamentos" subtitle="Entradas e saídas do dia a dia" actions={
         <>
           <PeriodNav label={monthLabel(month)} onPrev={() => setMonth(addMonths(month, -1))} onNext={() => setMonth(addMonths(month, 1))} onToday={() => setMonth(currentMonth())} />
+          <Button variant="soft" onClick={() => setImportOpen(true)}><FileUp size={16} /> Importar extrato</Button>
           <Button variant="soft" onClick={() => downloadCSV(`lancamentos-${month}.csv`, list.map((t) => ({ Data: t.date, Tipo: t.type === 'income' ? 'Receita' : 'Despesa', Descrição: t.description, Categoria: t.category, Pagamento: t.paymentMethod, Valor: t.amount })))}><Download size={16} /> CSV</Button>
         </>
       } />
@@ -81,6 +87,8 @@ export default function Transactions() {
                       amount={`${t.type === 'income' ? '+' : '−'} ${formatBRL(t.amount)}`} amountTone={t.internal ? 'muted' : t.type === 'income' ? 'good' : 'bad'}
                       onClick={t.internal ? undefined : () => quickAdd({ editing: t })}
                       actions={<>
+                        {t.attachmentId && <IconButton label="Ver comprovante" onClick={() => setViewing(t.attachmentId!)} className="text-sky-300"><Paperclip size={15} /></IconButton>}
+                        {!t.internal && <IconButton label="Duplicar" className="hidden md:inline-flex" onClick={() => quickAdd({ duplicate: t })}><Copy size={15} /></IconButton>}
                         {!t.internal && <IconButton label="Editar" className="hidden md:inline-flex" onClick={() => quickAdd({ editing: t })}><Pencil size={15} /></IconButton>}
                         <ConfirmDelete onConfirm={() => remove('transactions', t.id)} />
                       </>} />
@@ -91,6 +99,10 @@ export default function Transactions() {
           })}
         </div>
       )}
+      <ImportStatement open={importOpen} onClose={() => setImportOpen(false)} />
+      <Modal open={!!viewing} onClose={() => setViewing(null)} title="Comprovante">
+        {viewingPhoto ? <img src={viewingPhoto.dataUrl} alt="Comprovante" className="mx-auto max-h-[70dvh] rounded-2xl" /> : <p className="text-sm text-slate-400">Foto não encontrada.</p>}
+      </Modal>
     </div>
   );
 }

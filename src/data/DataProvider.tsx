@@ -12,7 +12,7 @@ const byCreatedAsc = (a: any, b: any) => (a.createdAt ?? '').localeCompare(b.cre
 const SORT: Record<CollectionKey, (a: any, b: any) => number> = {
   transactions: byDateDesc, sessions: byDateDesc, vehicleExpenses: byDateDesc,
   goals: byCreatedDesc, shopping: byCreatedDesc, fixedPayments: byCreatedDesc,
-  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc, accounts: byCreatedAsc, cards: byCreatedAsc, budgets: byCreatedAsc,
+  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc, accounts: byCreatedAsc, cards: byCreatedAsc, budgets: byCreatedAsc, attachments: byCreatedAsc,
 };
 
 interface DataApi {
@@ -109,6 +109,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (t?.transferGroup) ops.del!.transactions = (data.transactions as any[]).filter((x) => x.transferGroup === t.transferGroup).map((x) => x.id);
       // Apagar o lançamento de uma conta fixa paga desmarca o pagamento.
       if (t?.internal === 'fixed-payment') ops.del!.fixedPayments = (data.fixedPayments as any[]).filter((p) => p.transactionId === id).map((p) => p.id);
+      // Foto do comprovante: apaga se nenhum outro lançamento usar (parcelas compartilham a mesma foto).
+      const gone = new Set(ops.del!.transactions ?? [id]);
+      const att = t?.attachmentId;
+      if (att && !(data.transactions as any[]).some((x) => x.attachmentId === att && !gone.has(x.id))) ops.del!.attachments = [att];
     }
     if (k === 'accounts' || k === 'cards') return false; // contas e cartões são arquivados, não apagados
     // Desmarcar conta fixa paga: desfaz também a saída/entrada na conta.

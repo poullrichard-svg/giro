@@ -132,7 +132,7 @@ export default function Shell() {
           </div>
         </nav>
       </div>
-      <TransactionForm open={txOpen} onClose={() => setTxOpen(false)} preset={preset} />
+      <TransactionForm open={txOpen} onClose={() => setTxOpen(false)} preset={preset} onDuplicate={(t) => openTx({ duplicate: t })} />
     </QuickAddCtx.Provider>
   );
 }

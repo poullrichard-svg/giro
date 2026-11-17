@@ -6,18 +6,18 @@ import { BACKUP_KEY, downloadBackup, parseBackup } from '../data/backup';
 import { NAV } from '../components/Shell';
 import { Button, Card } from '../components/ui';
 import { downloadCSV } from '../lib/csv';
-import { parseTransactionsCSV } from '../lib/csvImport';
+import { ImportStatement } from '../components/ImportStatement';
 import { daysUntil, formatDate, localISODate } from '../lib/format';
 
 const readLastBackup = () => { try { return localStorage.getItem(BACKUP_KEY); } catch { return null; } };
 
 export default function More() {
-  const { data, persisted, engine, insert, replaceAll } = useData();
+  const { data, persisted, engine, replaceAll } = useData();
   const toast = useToast();
   const [lastBackup, setLastBackup] = useState(readLastBackup);
   const [confirmErase, setConfirmErase] = useState(false);
   const jsonRef = useRef<HTMLInputElement>(null);
-  const csvRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Registros do usuário (contas e configurações não contam: a "Carteira" é criada sozinha).
   const total = Object.entries(data).filter(([k]) => k !== 'accounts' && k !== 'settings').reduce((s, [, arr]) => s + arr.length, 0);
@@ -36,15 +36,7 @@ export default function More() {
     } catch (err: any) { toast(err.message, 'error'); }
   };
 
-  const importCSV = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; e.target.value = '';
-    if (!file) return;
-    try {
-      const { items, skipped } = parseTransactionsCSV(await file.text());
-      if (!items.length) { toast('Nenhum lançamento válido no arquivo', 'error'); return; }
-      if (await insert('transactions', items)) toast(`${items.length} ${items.length === 1 ? "lançamento importado" : "lançamentos importados"}${skipped ? ` (${skipped} linhas ignoradas)` : ''}`);
-    } catch (err: any) { toast(err.message, 'error'); }
-  };
+
 
   return (
     <div className="space-y-4">
@@ -81,10 +73,9 @@ export default function More() {
         <div className="flex flex-wrap gap-2">
           <Button variant="soft" onClick={() => downloadCSV(`giro-lancamentos-${localISODate()}.csv`, data.transactions.map((t) => ({ Data: t.date, Tipo: t.type === 'income' ? 'Receita' : 'Despesa', Descrição: t.description, Categoria: t.category, Pagamento: t.paymentMethod, Valor: t.amount })))}><Download size={16} /> Lançamentos (Excel)</Button>
           <Button variant="soft" onClick={() => downloadCSV(`giro-motorista-${localISODate()}.csv`, data.sessions.map((s) => ({ Data: s.date, App: s.app, Ganho: s.amount, Corridas: s.trips, Km: s.kmDriven, Horas: s.hoursWorked, Combustível: s.fuelSpent, Alimentação: s.foodSpent })))}><Download size={16} /> Corridas (Excel)</Button>
-          <Button variant="soft" onClick={() => csvRef.current?.click()}><Upload size={16} /> Importar lançamentos (CSV)</Button>
-          <input ref={csvRef} type="file" accept=".csv,text/csv" hidden onChange={importCSV} />
+          <Button variant="soft" onClick={() => setImportOpen(true)}><Upload size={16} /> Importar extrato (OFX ou CSV)</Button>
         </div>
-        <p className="mt-2 text-[11px] text-slate-500">A importação aceita o CSV do Giro ou a tabela <em>transactions</em> exportada do Supabase (Table Editor → Export → CSV) — útil para trazer o histórico antigo. Os lançamentos importados são somados aos atuais.</p>
+        <p className="mt-2 text-[11px] text-slate-500">Aceita OFX e CSV dos bancos, o CSV do próprio Giro e a tabela <em>transactions</em> exportada do Supabase. Lançamentos repetidos são detectados e ficam desmarcados.</p>
       </Card>
 
       <Card title={<span className="flex items-center gap-2"><Smartphone size={16} /> Instalar no celular</span>}>
@@ -103,6 +94,7 @@ export default function More() {
           <Trash2 size={16} /> {confirmErase ? 'Toque de novo para apagar TUDO deste aparelho' : 'Apagar todos os dados'}
         </Button>
       </Card>
+      <ImportStatement open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 }

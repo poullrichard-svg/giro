@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BellRing, CalendarClock, Car, CheckCircle2, CreditCard, Gauge, PiggyBank, Repeat, TrendingDown, TrendingUp } from 'lucide-react';
+import { BellRing, CalendarClock, Car, Check, CheckCircle2, ChevronRight, CreditCard, Gauge, PiggyBank, Repeat, TrendingDown, TrendingUp } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
 import { usePayFixed } from '../data/actions';
@@ -8,7 +8,7 @@ import { formatBRL, formatDate } from '../lib/format';
 import { averageSpent, budgetStatus, monthEndProjection, spentIn, upcomingDue, type BudgetStatus, type DueItem } from '../lib/planning';
 import { enableReminders, remindersEnabled, remindersSupported, sendDueReminders } from '../lib/reminders';
 import { go } from '../router';
-import { Button, Card, Empty, Field, Modal, MoneyInput, Money, Progress, Row, cx } from './ui';
+import { Button, Card, Empty, Field, IconButton, Modal, MoneyInput, Money, Progress, Row, cx } from './ui';
 
 const LEVEL_TONE = { ok: 'good', atencao: 'warn', estourou: 'bad' } as const;
 
@@ -135,9 +135,11 @@ export function UpcomingCard({ today }: { today: string }) {
               const Icon = DUE_ICON[i.kind];
               return (
                 <Row key={i.id} tone={i.daysLeft < 0 ? 'bad' : i.daysLeft <= 1 ? 'warn' : 'info'} icon={<Icon size={17} />}
-                  title={i.title} subtitle={<span className={i.daysLeft < 0 ? 'text-rose-400' : i.daysLeft <= 1 ? 'text-amber-400' : undefined}>{dueText(i.daysLeft)} · {formatDate(i.date).slice(0, 5)}</span>}
-                  amount={formatBRL(i.amount)} amountTone="bad"
-                  actions={<button type="button" onClick={() => act(i)} className="press rounded-xl bg-white/[.06] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white ring-1 ring-white/10 hover:bg-white/10">{i.kind === 'fixa' ? 'Paguei' : 'Abrir'}</button>} />
+                  title={i.title} subtitle={<><span className={i.daysLeft < 0 ? 'text-rose-400' : i.daysLeft <= 1 ? 'text-amber-400' : undefined}>{dueText(i.daysLeft)} · {formatDate(i.date).slice(0, 5)}</span><span className="text-rose-400 sm:hidden"> · {formatBRL(i.amount)}</span></>}
+                  amount={formatBRL(i.amount)} amountTone="bad" amountClassName="hidden sm:inline"
+                  actions={i.kind === 'fixa'
+                    ? <IconButton label={`Paguei — ${i.title}`} onClick={() => act(i)} className="bg-emerald-500/15 text-emerald-300 ring-emerald-500/25 hover:bg-emerald-500/25 hover:text-emerald-200"><Check size={17} strokeWidth={3} /></IconButton>
+                    : <IconButton label={`Abrir — ${i.title}`} onClick={() => act(i)}><ChevronRight size={18} /></IconButton>} />
               );
             })}
           </ul>

@@ -57,6 +57,14 @@ const PAYMENT_RULES: Array<[string, string[]]> = [
 
 const FILLER = new Set(['gastei', 'paguei', 'comprei', 'recebi', 'ganhei', 'entrou', 'abasteci', 'reais', 'real', 'r$', 'no', 'na', 'nos', 'nas', 'de', 'do', 'da', 'com', 'em', 'o', 'a', 'hoje', 'ontem', 'anteontem', 'pix', 'debito', 'credito', 'dinheiro', 'boleto', 'cartao', 'via', 'pelo', 'pela', 'dia']);
 
+/** Sugere a categoria de um texto (descrição de extrato, por exemplo). */
+export function guessCategory(text: string, type: TxType): string {
+  const n = norm(text);
+  const has = (w: string) => new RegExp(`(^|\\W)${w}(\\W|$)`).test(n);
+  const rules = type === 'income' ? INCOME_RULES : CATEGORY_RULES;
+  return rules.find(([, words]) => words.some(has))?.[0] ?? 'Outros';
+}
+
 export function parseQuickEntry(text: string, today = localISODate()): QuickEntry | null {
   const raw = text.trim();
   if (!raw) return null;
