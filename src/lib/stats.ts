@@ -1,10 +1,12 @@
 import type { DriverSession, FixedBill, FixedPayment, Transaction, Vehicle, VehicleExpense } from '../types';
 import { addMonths, daysUntil, hhmmToHours, localISODate, round2 } from './format';
+import { isInternal, txMonth } from './cards';
 
 const sum = <T,>(arr: T[], f: (x: T) => number) => round2(arr.reduce((s, x) => s + (f(x) || 0), 0));
 
 export function monthTotals(tx: Transaction[], fixed: FixedBill[], month: string) {
-  const m = tx.filter((t) => t.date?.startsWith(month));
+  // Compras no cartão contam no mês da fatura; transferências e pagamentos de fatura não contam.
+  const m = tx.filter((t) => !isInternal(t) && t.date && txMonth(t) === month);
   const varIncome = sum(m.filter((t) => t.type === 'income'), (t) => t.amount);
   const varExpense = sum(m.filter((t) => t.type === 'expense'), (t) => t.amount);
   const fixIncome = sum(fixed.filter((t) => t.type === 'income'), (t) => t.amount);
@@ -19,7 +21,7 @@ export function monthTotals(tx: Transaction[], fixed: FixedBill[], month: string
 
 export function categoryBreakdown(tx: Transaction[], fixed: FixedBill[], month: string) {
   const map = new Map<string, number>();
-  for (const t of tx) if (t.type === 'expense' && t.date?.startsWith(month)) map.set(t.category, (map.get(t.category) ?? 0) + t.amount);
+  for (const t of tx) if (t.type === 'expense' && !isInternal(t) && t.date && txMonth(t) === month) map.set(t.category, (map.get(t.category) ?? 0) + t.amount);
   for (const t of fixed) if (t.type === 'expense') map.set(t.category, (map.get(t.category) ?? 0) + t.amount);
   return [...map.entries()].map(([label, value]) => ({ label, value: round2(value) })).sort((a, b) => b.value - a.value);
 }

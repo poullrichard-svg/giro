@@ -6,9 +6,18 @@ import { Button, Card, ConfirmDelete, Empty, IconButton, Input, PageHeader, Peri
 import { addMonths, currentMonth, formatBRL, formatDayLabel, monthLabel } from '../lib/format';
 import type { Transaction } from '../types';
 import { downloadCSV } from '../lib/csv';
+import { txMonth } from '../lib/cards';
 
 export default function Transactions() {
   const { data, remove } = useData();
+  const accName = new Map(data.accounts.map((a) => [a.id, a.name]));
+  const cardName = new Map(data.cards.map((c) => [c.id, c.name]));
+  const sourceLabel = (t: Transaction) => {
+    if (t.internal === 'transfer') return `Transferência · ${accName.get(t.accountId ?? '') ?? ''}`;
+    if (t.internal === 'invoice-payment') return `Pagamento de fatura · ${accName.get(t.accountId ?? '') ?? ''}`;
+    if (t.cardId) return `${t.category} · ${cardName.get(t.cardId) ?? 'Cartão'}${t.installmentCount ? ` · ${t.installmentIndex}/${t.installmentCount}` : ''} · fatura ${t.invoiceMonth?.slice(5, 7)}/${t.invoiceMonth?.slice(2, 4)}`;
+    return `${t.category} · ${accName.get(t.accountId ?? '') ?? t.paymentMethod}`;
+  };
   const quickAdd = useQuickAdd();
   const [month, setMonth] = useState(currentMonth());
   const [type, setType] = useState<'all' | 'income' | 'expense'>('all');
@@ -16,7 +25,7 @@ export default function Transactions() {
   const [q, setQ] = useState('');
 
   const list = useMemo(() => data.transactions.filter((t) =>
-    t.date?.startsWith(month) && (type === 'all' || t.type === type) && (!cat || t.category === cat) &&
+    t.date && txMonth(t) === month && (type === 'all' || t.type === type) && (!cat || t.category === cat) &&
     (!q || `${t.description} ${t.category} ${t.paymentMethod}`.toLowerCase().includes(q.toLowerCase())),
   ).sort((a, b) => b.date.localeCompare(a.date)), [data.transactions, month, type, cat, q]);
 
@@ -26,9 +35,9 @@ export default function Transactions() {
     return [...m.entries()];
   }, [list]);
 
-  const cats = useMemo(() => [...new Set(data.transactions.filter((t) => t.date?.startsWith(month)).map((t) => t.category))].sort(), [data.transactions, month]);
-  const inc = list.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const exp = list.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const cats = useMemo(() => [...new Set(data.transactions.filter((t) => t.date && txMonth(t) === month).map((t) => t.category))].sort(), [data.transactions, month]);
+  const inc = list.filter((t) => t.type === 'income' && !t.internal).reduce((s, t) => s + t.amount, 0);
+  const exp = list.filter((t) => t.type === 'expense' && !t.internal).reduce((s, t) => s + t.amount, 0);
 
   return (
     <div>
@@ -67,11 +76,11 @@ export default function Transactions() {
                   {items.map((t) => (
                     <Row key={t.id} tone={t.type === 'income' ? 'good' : 'bad'}
                       icon={t.type === 'income' ? <ArrowUp size={19} strokeWidth={2.6} /> : <ArrowDown size={19} strokeWidth={2.6} />}
-                      title={t.description} subtitle={`${t.category} · ${t.paymentMethod}`}
-                      amount={`${t.type === 'income' ? '+' : '−'} ${formatBRL(t.amount)}`} amountTone={t.type === 'income' ? 'good' : 'bad'}
-                      onClick={() => quickAdd({ editing: t })}
+                      title={t.description} subtitle={sourceLabel(t)}
+                      amount={`${t.type === 'income' ? '+' : '−'} ${formatBRL(t.amount)}`} amountTone={t.internal ? 'muted' : t.type === 'income' ? 'good' : 'bad'}
+                      onClick={t.internal ? undefined : () => quickAdd({ editing: t })}
                       actions={<>
-                        <IconButton label="Editar" className="hidden md:inline-flex" onClick={() => quickAdd({ editing: t })}><Pencil size={15} /></IconButton>
+                        {!t.internal && <IconButton label="Editar" className="hidden md:inline-flex" onClick={() => quickAdd({ editing: t })}><Pencil size={15} /></IconButton>}
                         <ConfirmDelete onConfirm={() => remove('transactions', t.id)} />
                       </>} />
                   ))}

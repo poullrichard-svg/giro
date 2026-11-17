@@ -9,6 +9,43 @@ export interface Transaction {
   paymentMethod: string;
   date: string; // YYYY-MM-DD
   vehicleId?: string | null;
+  /** Conta de onde saiu/entrou o dinheiro. Compras no cartão não têm conta (têm cartão). */
+  accountId?: string | null;
+  cardId?: string | null;
+  /** Mês da fatura do cartão (YYYY-MM). A compra conta no orçamento deste mês. */
+  invoiceMonth?: string | null;
+  installmentGroup?: string | null;
+  installmentIndex?: number | null; // 1..N
+  installmentCount?: number | null;
+  /**
+   * Movimentação interna: transferência entre contas ou pagamento de fatura.
+   * Mexe no saldo das contas, mas não conta como receita/despesa (evita contar em dobro).
+   */
+  internal?: 'transfer' | 'invoice-payment' | null;
+  transferGroup?: string | null;
+}
+
+export type AccountKind = 'corrente' | 'poupanca' | 'carteira' | 'investimento' | 'outro';
+
+export interface Account {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  color: string;
+  initialBalance: number;
+  archived?: boolean;
+}
+
+export interface Card {
+  id: string;
+  name: string;
+  color: string;
+  limit: number;
+  closingDay: number;
+  dueDay: number;
+  /** Conta usada por padrão para pagar a fatura. */
+  accountId?: string | null;
+  archived?: boolean;
 }
 
 /** Conta fixa (recorrente todo mês). Tabela: fixed_transactions */

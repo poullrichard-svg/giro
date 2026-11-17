@@ -12,7 +12,7 @@ const byCreatedAsc = (a: any, b: any) => (a.createdAt ?? '').localeCompare(b.cre
 const SORT: Record<CollectionKey, (a: any, b: any) => number> = {
   transactions: byDateDesc, sessions: byDateDesc, vehicleExpenses: byDateDesc,
   goals: byCreatedDesc, shopping: byCreatedDesc, fixedPayments: byCreatedDesc,
-  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc,
+  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc, accounts: byCreatedAsc, cards: byCreatedAsc,
 };
 
 interface DataApi {
@@ -40,7 +40,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const load = useCallback(async () => {
     const entries = await Promise.all(COLLECTIONS.map(async (c) => [c, (await getAll(c)).sort(SORT[c])] as const));
-    setData(Object.fromEntries(entries) as unknown as Store);
+    const store = Object.fromEntries(entries) as unknown as Store;
+    // Primeira abertura (ou vindo de versão antiga): cria a conta "Carteira" e coloca nela
+    // os lançamentos que ainda não têm conta nem cartão.
+    if (store.accounts.length === 0) {
+      const now = new Date().toISOString();
+      const wallet = { id: newId(), name: 'Carteira', kind: 'carteira', color: '#22c55e', initialBalance: 0, createdAt: now, updatedAt: now };
+      const orphan = (store.transactions as any[]).filter((t) => !t.accountId && !t.cardId).map((t) => ({ ...t, accountId: wallet.id }));
+      await write({ put: { accounts: [wallet], transactions: orphan } });
+      store.accounts = [wallet] as any;
+      const ids = new Map(orphan.map((t) => [t.id, t]));
+      store.transactions = (store.transactions as any[]).map((t) => ids.get(t.id) ?? t) as any;
+    }
+    setData(store);
   }, []);
 
   useEffect(() => {
@@ -72,9 +84,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const insert: DataApi['insert'] = useCallback(async (k, items) => {
     const now = new Date().toISOString();
-    const list = (Array.isArray(items) ? items : [items]).map((i) => ({ ...i, id: newId(), createdAt: now, updatedAt: now })) as any[];
+    // Lançamento sem conta nem cartão vai para a conta padrão (a primeira ativa).
+    const defaultAccount = (data.accounts as any[]).find((a) => !a.archived)?.id ?? null;
+    const list = (Array.isArray(items) ? items : [items]).map((i: any) => ({
+      ...i,
+      ...(k === 'transactions' && !i.accountId && !i.cardId ? { accountId: defaultAccount } : {}),
+      id: newId(), createdAt: now, updatedAt: now,
+    })) as any[];
     return (await commit({ put: { [k]: list } })) ? list : null;
-  }, [commit]);
+  }, [commit, data.accounts]);
 
   const update: DataApi['update'] = useCallback(async (k, id, patch) => {
     const cur = (data[k] as any[]).find((x) => x.id === id);
@@ -85,6 +103,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const remove: DataApi['remove'] = useCallback(async (k, id) => {
     const ops: Parameters<typeof write>[0] = { del: { [k]: [id] }, put: {} };
     // Mesmas regras que um banco relacional faria: apagar o "pai" limpa os "filhos".
+    // Transferência tem dois lados: apaga os dois.
+    if (k === 'transactions') {
+      const t = (data.transactions as any[]).find((x) => x.id === id);
+      if (t?.transferGroup) ops.del!.transactions = (data.transactions as any[]).filter((x) => x.transferGroup === t.transferGroup).map((x) => x.id);
+    }
+    if (k === 'accounts' || k === 'cards') return false; // contas e cartões são arquivados, não apagados
     if (k === 'vehicles') {
       ops.del!.vehicleExpenses = data.vehicleExpenses.filter((e) => e.vehicleId === id).map((e) => e.id);
       ops.put!.sessions = data.sessions.filter((s) => s.vehicleId === id).map((s) => ({ ...s, vehicleId: null }));

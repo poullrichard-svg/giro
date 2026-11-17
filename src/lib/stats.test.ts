@@ -44,3 +44,16 @@ describe('elapsedDays', () => {
     expect(elapsedDays('2026-12-01', '2026-12-31', '2026-11-13')).toBe(0);
   });
 });
+
+describe('cartão e movimentações internas', () => {
+  it('compra no cartão conta na fatura; pagamento de fatura e transferência não contam', () => {
+    const base = { paymentMethod: 'Pix', category: 'X' };
+    const t = monthTotals([
+      { id: '1', description: 'TV', amount: 300, type: 'expense', date: '2026-11-20', cardId: 'c', invoiceMonth: '2026-12', ...base },
+      { id: '2', description: 'Fatura', amount: 500, type: 'expense', date: '2026-11-10', accountId: 'a', internal: 'invoice-payment', ...base },
+      { id: '3', description: 'Transf', amount: 100, type: 'income', date: '2026-11-10', accountId: 'b', internal: 'transfer', ...base },
+    ], [], '2026-11');
+    expect(t).toMatchObject({ income: 0, expense: 0 });
+    expect(monthTotals([{ id: '1', description: 'TV', amount: 300, type: 'expense', date: '2026-11-20', cardId: 'c', invoiceMonth: '2026-12', ...base }], [], '2026-12').expense).toBe(300);
+  });
+});

@@ -3,6 +3,7 @@ import { Briefcase, CalendarDays, Car, CircleDollarSign, Package, Pencil, Plus, 
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
 import { BigTile, Button, Card, ConfirmDelete, Empty, Field, IconButton, IconChip, Input, MiniStat, Modal, MoneyInput, NumberInput, PageHeader, PeriodNav, Progress, Row, Segmented, Select, cx } from '../components/ui';
+import { hasErrors, rules, validate, type Errors } from '../lib/validate';
 import { WorkSetup } from '../components/WorkSetup';
 import { countFieldLabel, countLabel, incomeCategoryFor, kindsOf, panelTitle, platformOf, PROFILE_ID, unitLabel, WORK_TYPES } from '../lib/work';
 import { addDays, addMonths, elapsedDays, formatBRL, formatDayLabel, formatNumber, hoursToHHMM, localISODate, monthLabel, parseISODate } from '../lib/format';
@@ -179,9 +180,13 @@ function SessionForm({ open, editing, profile, defaultDate, onClose, insert, upd
   const [odometer, setOdometer] = useState(0);
   const [toLedger, setToLedger] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<Errors<'date' | 'amount' | 'km' | 'hours' | 'platform' | 'odometer'>>({});
+  // Some com o erro assim que a pessoa mexe no formulário; volta a validar ao salvar.
+  useEffect(() => { setErrors({}); }, [f, odometer]);
 
   useEffect(() => {
     if (!open) return;
+    setErrors({});
     setF(editing ? { ...editing, platformId: editing.platformId ?? null, workKind: editing.workKind ?? platformOf(profile, editing).kind, observation: editing.observation ?? '', vehicleId: editing.vehicleId ?? '' } : empty());
     setOdometer(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -191,7 +196,16 @@ function SessionForm({ open, editing, profile, defaultDate, onClose, insert, upd
   const vehicle = vehicles.find((v) => v.id === f.vehicleId);
 
   const save = async () => {
-    if (f.amount <= 0 && f.trips <= 0) { toast('Informe pelo menos o valor ganho', 'error'); return; }
+    const e = validate({
+      platform: [!f.app && 'Escolha onde trabalhou'],
+      date: [rules.date(f.date), f.date > localISODate() && 'A data não pode ser no futuro'],
+      amount: [rules.positive(f.amount, f.workKind === 'fixo' ? 'Valor da diária' : 'Valor ganho'), rules.max(f.amount, 100_000, 'Valor')],
+      km: [rules.nonNegative(f.kmDriven, 'Km rodados'), rules.max(f.kmDriven, 3000, 'Km rodados')],
+      hours: [rules.time(f.hoursWorked, 'Horas')],
+      odometer: [vehicle && odometer > 0 && odometer < vehicle.odometer && `O hodômetro atual já é ${formatNumber(vehicle.odometer)} km`],
+    });
+    setErrors(e);
+    if (hasErrors(e)) return;
     setBusy(true);
     const payload = { ...f, vehicleId: f.vehicleId || null, observation: f.observation || null };
     let ok: boolean;
@@ -218,9 +232,9 @@ function SessionForm({ open, editing, profile, defaultDate, onClose, insert, upd
     <Modal open={open} onClose={onClose} title={editing ? 'Editar registro' : 'Registrar dia de trabalho'} footer={<Button className="w-full" disabled={busy} onClick={save}>{busy ? 'Salvando…' : 'Salvar'}</Button>}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Data"><Input type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></Field>
+          <Field label="Data" error={errors.date}><Input type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></Field>
         </div>
-        <Field label="Onde trabalhou" group>
+        <Field label="Onde trabalhou" group error={errors.platform}>
           <div className="flex flex-wrap gap-2">
             {platforms.map((p) => {
               const on = f.platformId === p.id || (!f.platformId && f.app === p.name);
@@ -238,18 +252,18 @@ function SessionForm({ open, editing, profile, defaultDate, onClose, insert, upd
         {vehicles.length > 0 && (
           <Field label="Veículo"><Select value={f.vehicleId ?? ''} onChange={(e) => { const v = vehicles.find((x) => x.id === e.target.value); setF((x) => ({ ...x, vehicleId: e.target.value, fuelConsumption: v?.fuelConsumption ?? x.fuelConsumption })); }} options={[{ value: '', label: '—' }, ...vehicles.map((v) => ({ value: v.id, label: [v.name, v.plate].filter(Boolean).join(' · ') }))]} /></Field>
         )}
-        <Field label={f.workKind === 'fixo' ? 'Valor da diária' : 'Quanto ganhou (bruto)'}><MoneyInput value={f.amount} onChange={(v) => set('amount', v)} className="text-lg font-semibold" /></Field>
+        <Field label={f.workKind === 'fixo' ? 'Valor da diária' : 'Quanto ganhou (bruto)'} error={errors.amount}><MoneyInput value={f.amount} onChange={(v) => set('amount', v)} className="text-lg font-semibold" /></Field>
         <div className="grid grid-cols-3 gap-3">
           <Field label={countFieldLabel(f.workKind)}><NumberInput value={f.trips} onChange={(v) => set('trips', Math.round(v))} /></Field>
-          <Field label="Km rodados"><NumberInput value={f.kmDriven} onChange={(v) => set('kmDriven', v)} /></Field>
-          <Field label="Horas"><Input type="time" value={f.hoursWorked} onChange={(e) => set('hoursWorked', e.target.value)} /></Field>
+          <Field label="Km rodados" error={errors.km}><NumberInput value={f.kmDriven} onChange={(v) => set('kmDriven', v)} /></Field>
+          <Field label="Horas" error={errors.hours}><Input type="time" value={f.hoursWorked} onChange={(e) => set('hoursWorked', e.target.value)} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Combustível"><MoneyInput value={f.fuelSpent} onChange={(v) => set('fuelSpent', v)} /></Field>
           <Field label="Alimentação"><MoneyInput value={f.foodSpent} onChange={(v) => set('foodSpent', v)} /></Field>
         </div>
         {vehicle && (
-          <Field label="Hodômetro no fim do dia (opcional)" hint={`Atual: ${formatNumber(vehicle.odometer)} km. Se deixar em branco, somamos os km rodados.`}>
+          <Field label="Hodômetro no fim do dia (opcional)" error={errors.odometer} hint={`Atual: ${formatNumber(vehicle.odometer)} km. Se deixar em branco, somamos os km rodados.`}>
             <NumberInput value={odometer} onChange={setOdometer} suffix="km" />
           </Field>
         )}

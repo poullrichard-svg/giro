@@ -33,7 +33,7 @@ export function splitCSV(text: string): string[][] {
 }
 
 const norm = (s: string) => s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-const ALIASES: Record<keyof Omit<Transaction, 'id' | 'vehicleId'>, string[]> = {
+const ALIASES: Record<'date' | 'type' | 'description' | 'category' | 'paymentMethod' | 'amount', string[]> = {
   date: ['data', 'date'],
   type: ['tipo', 'type'],
   description: ['descricao', 'description'],

@@ -19,7 +19,8 @@ export default function More() {
   const jsonRef = useRef<HTMLInputElement>(null);
   const csvRef = useRef<HTMLInputElement>(null);
 
-  const total = Object.values(data).reduce((s, arr) => s + arr.length, 0);
+  // Registros do usuário (contas e configurações não contam: a "Carteira" é criada sozinha).
+  const total = Object.entries(data).filter(([k]) => k !== 'accounts' && k !== 'settings').reduce((s, [, arr]) => s + arr.length, 0);
   const backupAge = lastBackup ? -daysUntil(lastBackup.slice(0, 10)) : null;
 
   const exportBackup = () => { downloadBackup(data); setLastBackup(readLastBackup()); toast('Backup baixado'); };

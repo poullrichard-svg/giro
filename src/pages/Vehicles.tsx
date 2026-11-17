@@ -7,6 +7,7 @@ const KIND_ICON: Record<VehicleKind, typeof Car> = { carro: Car, moto: Motorbike
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
 import { Button, Card, ConfirmDelete, Empty, Field, Input, Modal, MoneyInput, NumberInput, PageHeader, Progress, Segmented, Row, Select, Stat, Tilt, cx } from '../components/ui';
+import { hasErrors, rules, validate, type Errors } from '../lib/validate';
 import { VEHICLE_EXPENSE_CATEGORIES } from '../lib/categories';
 import { daysUntil, formatBRL, formatDate, formatNumber, localISODate } from '../lib/format';
 import { oilStatus, vehicleAlerts, vehicleFixedMonthly } from '../lib/stats';
@@ -216,10 +217,20 @@ function ExpenseForm({ open, onClose, vehicle, category, insert, update }: {
   const blank = (): Omit<VehicleExpense, 'id'> => ({ vehicleId: vehicle.id, date: localISODate(), category: category ?? 'Combustível', amount: 0, odometer: vehicle.odometer || null, liters: null, description: '' });
   const [f, setF] = useState(blank);
   const [toLedger, setToLedger] = useState(true);
-  useEffect(() => { if (open) setF(blank()); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open, category]);
+  const [errors, setErrors] = useState<Errors<'amount' | 'date' | 'odometer' | 'liters'>>({});
+  // Some com o erro assim que a pessoa mexe no formulário; volta a validar ao salvar.
+  useEffect(() => { setErrors({}); }, [f]);
+  useEffect(() => { if (open) { setErrors({}); setF(blank()); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open, category]);
 
   const save = async () => {
-    if (f.amount <= 0) { toast('Informe o valor', 'error'); return; }
+    const e = validate({
+      amount: [rules.positive(f.amount, 'Valor'), rules.max(f.amount, 1_000_000, 'Valor')],
+      date: [rules.date(f.date)],
+      odometer: [f.odometer != null && rules.nonNegative(f.odometer, 'Hodômetro'), f.category === 'Troca de óleo' && !f.odometer && 'Informe o hodômetro da troca'],
+      liters: [f.liters != null && rules.max(f.liters, 500, 'Litros')],
+    });
+    setErrors(e);
+    if (hasErrors(e)) return;
     const ok = await insert('vehicleExpenses', { ...f, description: f.description || null });
     if (!ok) return;
     if (toLedger) await insert('transactions', { description: `${f.category} · ${vehicle.name}${f.description ? ` (${f.description})` : ''}`, amount: f.amount, type: 'expense', category: f.category === 'Combustível' ? 'Combustível' : 'Veículo', paymentMethod: 'Pix', date: f.date, vehicleId: vehicle.id });
@@ -237,12 +248,12 @@ function ExpenseForm({ open, onClose, vehicle, category, insert, update }: {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Tipo" group><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={VEHICLE_EXPENSE_CATEGORIES} /></Field>
-          <Field label="Data"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
+          <Field label="Data" error={errors.date}><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
         </div>
-        <Field label="Valor"><MoneyInput value={f.amount} onChange={(v) => setF({ ...f, amount: v })} className="text-lg font-semibold" autoFocus /></Field>
+        <Field label="Valor" error={errors.amount}><MoneyInput value={f.amount} onChange={(v) => setF({ ...f, amount: v })} className="text-lg font-semibold" autoFocus /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Hodômetro" hint={isFuel ? 'Com litros, calcula o consumo real' : undefined}><NumberInput value={f.odometer ?? 0} onChange={(v) => setF({ ...f, odometer: v || null })} suffix="km" /></Field>
-          {isFuel && <Field label="Litros" hint="Encha o tanque para medir certo"><NumberInput value={f.liters ?? 0} onChange={(v) => setF({ ...f, liters: v || null })} suffix="L" /></Field>}
+          <Field label="Hodômetro" error={errors.odometer} hint={isFuel ? 'Com litros, calcula o consumo real' : undefined}><NumberInput value={f.odometer ?? 0} onChange={(v) => setF({ ...f, odometer: v || null })} suffix="km" /></Field>
+          {isFuel && <Field label="Litros" error={errors.liters} hint="Encha o tanque para medir certo"><NumberInput value={f.liters ?? 0} onChange={(v) => setF({ ...f, liters: v || null })} suffix="L" /></Field>}
         </div>
         <Field label="Descrição"><Input value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Ex.: Posto Shell, revisão 60 mil" /></Field>
         <label className="flex items-center gap-3 text-sm text-slate-300"><input type="checkbox" checked={toLedger} onChange={(e) => setToLedger(e.target.checked)} className="h-5 w-5 accent-brand-500" /> Lançar também no financeiro</label>
@@ -261,11 +272,30 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
   });
   const [f, setF] = useState(blank);
   const [tab, setTab] = useState<'dados' | 'custos' | 'manut'>('dados');
-  useEffect(() => { if (open) { setF(editing ? { ...editing } : blank()); setTab('dados'); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open, editing]);
+  const [errors, setErrors] = useState<Errors<'name' | 'year' | 'odometer' | 'plate' | 'ipvaDueDate' | 'licensingDueDate' | 'insuranceDueDate' | 'oilIntervalKm'>>({});
+  // Some com o erro assim que a pessoa mexe no formulário; volta a validar ao salvar.
+  useEffect(() => { setErrors({}); }, [f]);
+  useEffect(() => { if (open) { setErrors({}); setF(editing ? { ...editing } : blank()); setTab('dados'); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open, editing]);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
 
   const save = async () => {
-    if (!f.name.trim()) { toast('Dê um nome ao veículo (ex.: Onix prata)', 'error'); setTab('dados'); return; }
+    const nextYear = new Date().getFullYear() + 1;
+    const e = validate({
+      name: [rules.required(f.name, 'Apelido'), rules.maxLength(f.name, 40, 'Apelido')],
+      year: [f.year != null && rules.intBetween(f.year, 1950, nextYear, 'Ano')],
+      odometer: [rules.nonNegative(f.odometer, 'Hodômetro')],
+      plate: [f.plate && !/^[A-Z]{3}\d[A-Z\d]\d{2}$/.test(f.plate.toUpperCase().replace(/[^A-Z0-9]/g, '')) && 'Placa inválida (ex.: ABC1D23 ou ABC1234)'],
+      ipvaDueDate: [rules.optionalDate(f.ipvaDueDate, 'Vencimento do IPVA')],
+      licensingDueDate: [rules.optionalDate(f.licensingDueDate, 'Vencimento do licenciamento')],
+      insuranceDueDate: [rules.optionalDate(f.insuranceDueDate, 'Renovação do seguro')],
+      oilIntervalKm: [rules.positive(f.oilIntervalKm, 'Intervalo da troca de óleo')],
+    });
+    setErrors(e);
+    if (hasErrors(e)) {
+      setTab(e.name || e.year || e.odometer || e.plate ? 'dados' : e.oilIntervalKm ? 'manut' : 'custos');
+      toast('Confira os campos destacados', 'error');
+      return;
+    }
     const payload = { ...f, plate: f.plate.toUpperCase().replace(/[^A-Z0-9]/g, ''), ipvaDueDate: f.ipvaDueDate || null, licensingDueDate: f.licensingDueDate || null, insuranceDueDate: f.insuranceDueDate || null };
     delete (payload as any).id;
     const ok = editing ? await update('vehicles', editing.id, payload) : await insert('vehicles', payload);
@@ -278,10 +308,10 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
       {tab === 'dados' && (
         <div className="space-y-4">
           <Field label="Tipo" group><Segmented value={f.kind ?? 'carro'} onChange={(k) => setF((x) => ({ ...x, kind: k, fuelConsumption: k === 'moto' && x.fuelConsumption === 10 ? 35 : k === 'bike' ? 0 : x.fuelConsumption, oilIntervalKm: k === 'moto' && x.oilIntervalKm === 10000 ? 3000 : x.oilIntervalKm }))} options={VEHICLE_KINDS.map((k) => ({ value: k.value, label: k.value === 'van' ? 'Van' : k.label }))} /></Field>
-          <Field label="Apelido"><Input value={f.name} onChange={(e) => set('name', e.target.value)} placeholder={f.kind === 'moto' ? 'Ex.: CG 160 vermelha' : f.kind === 'bike' ? 'Ex.: Bike elétrica' : 'Ex.: Onix prata'} autoFocus /></Field>
+          <Field label="Apelido" error={errors.name}><Input maxLength={40} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder={f.kind === 'moto' ? 'Ex.: CG 160 vermelha' : f.kind === 'bike' ? 'Ex.: Bike elétrica' : 'Ex.: Onix prata'} autoFocus /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Placa"><Input value={f.plate} onChange={(e) => set('plate', e.target.value.toUpperCase())} placeholder="ABC1D23" maxLength={8} className="font-mono uppercase" /></Field>
-            <Field label="Ano"><Input type="number" inputMode="numeric" value={f.year ?? ''} onChange={(e) => set('year', e.target.value ? Number(e.target.value) : null)} /></Field>
+            <Field label="Placa" error={errors.plate}><Input value={f.plate} onChange={(e) => set('plate', e.target.value.toUpperCase())} placeholder="ABC1D23" maxLength={8} className="font-mono uppercase" /></Field>
+            <Field label="Ano" error={errors.year}><Input type="number" inputMode="numeric" value={f.year ?? ''} onChange={(e) => set('year', e.target.value ? Number(e.target.value) : null)} /></Field>
             <Field label="Marca"><Input value={f.brand ?? ''} onChange={(e) => set('brand', e.target.value)} placeholder="Chevrolet" /></Field>
             <Field label="Modelo"><Input value={f.model ?? ''} onChange={(e) => set('model', e.target.value)} placeholder="Onix 1.0 LT" /></Field>
             <Field label="Cor"><Input value={f.color ?? ''} onChange={(e) => set('color', e.target.value)} /></Field>
@@ -289,7 +319,7 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
           </div>
           <Field label="RENAVAM (opcional)"><Input inputMode="numeric" value={f.renavam ?? ''} onChange={(e) => set('renavam', e.target.value.replace(/\D/g, ''))} /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Hodômetro atual"><NumberInput value={f.odometer} onChange={(v) => set('odometer', Math.round(v))} suffix="km" /></Field>
+            <Field label="Hodômetro atual" error={errors.odometer}><NumberInput value={f.odometer} onChange={(v) => set('odometer', Math.round(v))} suffix="km" /></Field>
             <Field label="Consumo médio"><NumberInput value={f.fuelConsumption} onChange={(v) => set('fuelConsumption', v)} suffix="km/l" /></Field>
           </div>
         </div>
@@ -307,11 +337,11 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
             <>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="IPVA (valor anual)"><MoneyInput value={f.ipvaValue} onChange={(v) => set('ipvaValue', v)} /></Field>
-                <Field label="Vencimento IPVA"><Input type="date" value={f.ipvaDueDate ?? ''} onChange={(e) => set('ipvaDueDate', e.target.value)} /></Field>
+                <Field label="Vencimento IPVA" error={errors.ipvaDueDate}><Input type="date" value={f.ipvaDueDate ?? ''} onChange={(e) => set('ipvaDueDate', e.target.value)} /></Field>
                 <Field label="Licenciamento"><MoneyInput value={f.licensingValue} onChange={(v) => set('licensingValue', v)} /></Field>
-                <Field label="Vencimento licenc."><Input type="date" value={f.licensingDueDate ?? ''} onChange={(e) => set('licensingDueDate', e.target.value)} /></Field>
+                <Field label="Vencimento licenc." error={errors.licensingDueDate}><Input type="date" value={f.licensingDueDate ?? ''} onChange={(e) => set('licensingDueDate', e.target.value)} /></Field>
                 <Field label="Seguro (por mês)"><MoneyInput value={f.insuranceValue} onChange={(v) => set('insuranceValue', v)} /></Field>
-                <Field label="Renovação seguro"><Input type="date" value={f.insuranceDueDate ?? ''} onChange={(e) => set('insuranceDueDate', e.target.value)} /></Field>
+                <Field label="Renovação seguro" error={errors.insuranceDueDate}><Input type="date" value={f.insuranceDueDate ?? ''} onChange={(e) => set('insuranceDueDate', e.target.value)} /></Field>
               </div>
             </>
           )}
@@ -320,7 +350,7 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
       {tab === 'manut' && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Troca de óleo a cada"><NumberInput value={f.oilIntervalKm} onChange={(v) => set('oilIntervalKm', Math.round(v))} suffix="km" /></Field>
+            <Field label="Troca de óleo a cada" error={errors.oilIntervalKm}><NumberInput value={f.oilIntervalKm} onChange={(v) => set('oilIntervalKm', Math.round(v))} suffix="km" /></Field>
             <Field label="Última troca (hodômetro)"><NumberInput value={f.lastOilChangeKm ?? 0} onChange={(v) => set('lastOilChangeKm', Math.round(v) || null)} suffix="km" /></Field>
           </div>
           <Field label="Anotações"><textarea className="min-h-24 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-brand-500/60" value={f.notes ?? ''} onChange={(e) => set('notes', e.target.value)} placeholder="Pneus trocados em…, correia dentada em…" /></Field>

@@ -1,6 +1,6 @@
 import { createContext, lazy, Suspense, useContext, useState, type ReactNode } from 'react';
 import {
-  Calculator, Car, CarFront, Flag, LayoutDashboard, Menu, Plus, Repeat, ShoppingCart, Wallet,
+  Calculator, Car, CarFront, Flag, Landmark, LayoutDashboard, Menu, Plus, Repeat, ShoppingCart, Wallet,
 } from 'lucide-react';
 import { go, useRoute, type Route } from '../router';
 import { useData } from '../data/DataProvider';
@@ -10,6 +10,7 @@ import { cx } from './ui';
 
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const Transactions = lazy(() => import('../pages/Transactions'));
+const Accounts = lazy(() => import('../pages/Accounts'));
 const FixedBills = lazy(() => import('../pages/FixedBills'));
 const Driver = lazy(() => import('../pages/Driver'));
 const Vehicles = lazy(() => import('../pages/Vehicles'));
@@ -21,6 +22,7 @@ const More = lazy(() => import('../pages/More'));
 const NAV: Array<{ id: Route; label: string; icon: typeof Wallet }> = [
   { id: 'inicio', label: 'Início', icon: LayoutDashboard },
   { id: 'lancamentos', label: 'Lançamentos', icon: Wallet },
+  { id: 'contas', label: 'Contas e cartões', icon: Landmark },
   { id: 'fixas', label: 'Contas fixas', icon: Repeat },
   { id: 'motorista', label: 'Motorista', icon: Car },
   { id: 'veiculos', label: 'Veículos', icon: CarFront },
@@ -41,7 +43,7 @@ export default function Shell() {
   const openTx = (p?: TxPreset) => { setPreset(p); setTxOpen(true); };
 
   const page: Record<Route, ReactNode> = {
-    inicio: <Dashboard />, lancamentos: <Transactions />, fixas: <FixedBills />, motorista: <Driver />,
+    inicio: <Dashboard />, lancamentos: <Transactions />, contas: <Accounts id={param} />, fixas: <FixedBills />, motorista: <Driver />,
     veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, metas: <Goals />, compras: <Shopping />, mais: <More />,
   };
 

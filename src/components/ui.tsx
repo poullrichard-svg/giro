@@ -120,17 +120,18 @@ export function IconButton({ label, className, ...p }: ButtonHTMLAttributes<HTML
  * Campo com rótulo. Use `group` quando o conteúdo for só botões (opções, chips):
  * assim tocar no título não "clica" no primeiro botão.
  */
-export function Field({ label, children, hint, className, group }: { label: string; children: ReactNode; hint?: ReactNode; className?: string; group?: boolean }) {
+export function Field({ label, children, hint, className, group, error }: { label: string; children: ReactNode; hint?: ReactNode; className?: string; group?: boolean; error?: string | null }) {
   const inner = (
     <>
-      <span className="label block text-slate-500">{label}</span>
+      <span className={cx('label block', error ? 'text-rose-400' : 'text-slate-500')}>{label}</span>
       {children}
-      {hint && <span className="block text-[11px] text-slate-500">{hint}</span>}
+      {error ? <span role="alert" className="pop-in block text-[12px] font-semibold text-rose-400">{error}</span> : hint && <span className="block text-[11px] text-slate-500">{hint}</span>}
     </>
   );
+  const cls = cx('block space-y-2', error && '[&_input]:!border-rose-500/70 [&_select]:!border-rose-500/70 [&_input]:!ring-4 [&_input]:!ring-rose-500/10', className);
   return group
-    ? <div role="group" aria-label={label} className={cx('block space-y-2', className)}>{inner}</div>
-    : <label className={cx('block space-y-2', className)}>{inner}</label>;
+    ? <div role="group" aria-label={label} className={cls}>{inner}</div>
+    : <label className={cls}>{inner}</label>;
 }
 
 const inputCls = 'w-full min-h-12 rounded-2xl border border-white/[.07] bg-[#08070f] px-4 text-sm font-semibold text-white outline-none transition duration-300 placeholder:font-medium placeholder:text-slate-600 hover:border-white/15 focus:border-brand-400/70 focus:ring-4 focus:ring-brand-500/15';

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowDown, ArrowDownCircle, ArrowUp, ArrowUpCircle, BarChart3, Bell, Car, CalendarClock, PieChart, Sparkles, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowDownCircle, ArrowUp, ArrowUpCircle, BarChart3, Bell, Car, CalendarClock, HardDriveDownload, PieChart, Sparkles, Wallet } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useQuickAdd } from '../components/Shell';
 import { useToast } from '../data/toast';
@@ -8,6 +8,9 @@ import { Card, Empty, Money, PeriodNav, Row, Stat, Tilt } from '../components/ui
 import { Bars, Donut } from '../components/charts';
 import { colorFor } from '../lib/categories';
 import { CategoryBadge } from '../components/CategoryBadge';
+import { Welcome } from '../components/Welcome';
+import { BACKUP_KEY, downloadBackup } from '../data/backup';
+import { daysUntil } from '../lib/format';
 import { addMonths, currentMonth, elapsedDays, formatBRL, formatDate, localISODate, monthLabel, shortMonthLabel } from '../lib/format';
 import { categoryBreakdown, driverStats, fixedBillAlerts, lastMonthsSeries, monthTotals, vehicleAlerts } from '../lib/stats';
 
@@ -30,6 +33,15 @@ export default function Dashboard() {
   const recent = data.transactions.slice(0, 6);
   const isCurrent = month === currentMonth();
 
+  const isEmpty = data.transactions.length === 0 && data.fixed.length === 0 && data.sessions.length === 0;
+  const [backupTick, setBackupTick] = useState(0);
+  const backupDays = useMemo(() => {
+    void backupTick;
+    if (data.transactions.length < 5) return null;
+    let last: string | null = null;
+    try { last = localStorage.getItem(BACKUP_KEY); } catch { /* sem storage */ }
+    return last ? -daysUntil(last.slice(0, 10)) : Infinity;
+  }, [data.transactions.length, backupTick]);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
   const today = (() => { const s = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }); return s.charAt(0).toUpperCase() + s.slice(1); })();
@@ -50,6 +62,16 @@ export default function Dashboard() {
         <PeriodNav label={monthLabel(month)} onPrev={() => setMonth(addMonths(month, -1))} onNext={() => setMonth(addMonths(month, 1))} onToday={() => setMonth(currentMonth())} />
       </div>
 
+      {isEmpty && <Welcome />}
+      {!isEmpty && backupDays !== null && backupDays > 7 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-[1.5rem] border border-amber-500/25 bg-amber-500/[.07] p-3 pl-4">
+          <HardDriveDownload size={18} className="shrink-0 text-amber-400" />
+          <p className="min-w-0 flex-1 text-sm font-semibold text-amber-100">{backupDays === Infinity ? 'Você ainda não fez backup dos seus dados.' : `Faz ${backupDays} dias desde o último backup.`} <span className="font-medium text-amber-200/70">Seus dados ficam só neste aparelho.</span></p>
+          <button type="button" onClick={() => { downloadBackup(data); setBackupTick((x) => x + 1); }} className="press rounded-xl bg-amber-400 px-3.5 py-2 text-[11px] font-extrabold uppercase tracking-wider text-amber-950">Fazer backup</button>
+        </div>
+      )}
+
+      {!isEmpty && <>
       {/* Cartão principal 3D com borda luminosa */}
       <Tilt max={5} className="solid ring-glow shine rounded-[2.25rem] p-6 md:p-8" style={{ '--tone': '#16a34a' } as React.CSSProperties}>
         <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-lime-300/30 blur-3xl" />
@@ -88,6 +110,8 @@ export default function Dashboard() {
         <Stat label="Lucro motorista" money={driver.netProfit} tone={driver.netProfit >= 0 ? 'info' : 'bad'} icon={<Car />} sub={`${formatBRL(driver.gross)} bruto · ${driver.daysWorked} ${driver.daysWorked === 1 ? 'dia' : 'dias'}`} />
       </div>
 
+      </>}
+
       <form onSubmit={async (e) => {
         e.preventDefault();
         const p = parseQuickEntry(quick);
@@ -104,6 +128,7 @@ export default function Dashboard() {
         <button type="submit" className="press btn-shine rounded-[1.2rem] bg-gradient-to-br from-brand-500 to-brand-700 px-5 py-3.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-white shadow-[0_8px_24px_-8px] shadow-brand-500">Lançar</button>
       </form>
 
+      {!isEmpty && <>
       {isCurrent && alerts.length > 0 && (
         <Card title={<><Bell size={14} className="text-amber-400" /> Atenção</>}>
           <ul className="stagger-x space-y-2.5">
@@ -136,6 +161,7 @@ export default function Dashboard() {
           </ul>
         )}
       </Card>
+      </>}
     </div>
   );
 }
