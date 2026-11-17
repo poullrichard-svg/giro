@@ -4,15 +4,17 @@ import { useData } from '../data/DataProvider';
 import { useQuickAdd } from '../components/Shell';
 import { useToast } from '../data/toast';
 import { parseQuickEntry } from '../lib/quickParse';
+import { budgetAlert } from '../lib/planning';
 import { Card, Empty, Money, PeriodNav, Row, Stat, Tilt } from '../components/ui';
 import { Bars, Donut } from '../components/charts';
 import { colorFor } from '../lib/categories';
 import { CategoryBadge } from '../components/CategoryBadge';
 import { Welcome } from '../components/Welcome';
+import { BudgetCard, ProjectionCard, UpcomingCard } from '../components/PlanningCards';
 import { BACKUP_KEY, downloadBackup } from '../data/backup';
 import { daysUntil } from '../lib/format';
 import { addMonths, currentMonth, elapsedDays, formatBRL, formatDate, localISODate, monthLabel, shortMonthLabel } from '../lib/format';
-import { categoryBreakdown, driverStats, fixedBillAlerts, lastMonthsSeries, monthTotals, vehicleAlerts } from '../lib/stats';
+import { categoryBreakdown, driverStats, lastMonthsSeries, monthTotals, vehicleAlerts } from '../lib/stats';
 
 export default function Dashboard() {
   const { data, insert } = useData();
@@ -24,7 +26,8 @@ export default function Dashboard() {
   const totals = useMemo(() => monthTotals(data.transactions, data.fixed, month), [data.transactions, data.fixed, month]);
   const cats = useMemo(() => categoryBreakdown(data.transactions, data.fixed, month).map((c, i) => ({ ...c, color: colorFor(c.label, i) })), [data.transactions, data.fixed, month]);
   const series = useMemo(() => lastMonthsSeries(data.transactions, data.fixed, month), [data.transactions, data.fixed, month]);
-  const alerts = useMemo(() => [...fixedBillAlerts(data.fixed, data.fixedPayments), ...vehicleAlerts(data.vehicles)].sort((a, b) => (a.days ?? 0) - (b.days ?? 0)), [data.fixed, data.fixedPayments, data.vehicles]);
+  // Vencimentos têm cartão próprio; aqui ficam só os avisos de manutenção (troca de óleo).
+  const alerts = useMemo(() => vehicleAlerts(data.vehicles).filter((a) => a.id.endsWith('-oil')), [data.vehicles]);
   const driver = useMemo(() => {
     const [y, m] = month.split('-').map(Number);
     const last = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
@@ -79,7 +82,7 @@ export default function Dashboard() {
         <span className="watermark !opacity-[.13] text-white"><Wallet size={190} strokeWidth={1.4} /></span>
         <div className="relative grid gap-6 md:grid-cols-[1.2fr_1fr] md:items-end">
           <div className="pop">
-            <p className="label text-white/75">Saldo de {monthLabel(month).split(' ')[0].toLowerCase()}</p>
+            <p className="label text-white/75">Resultado de {monthLabel(month).split(' ')[0].toLowerCase()} <span className="normal-case tracking-normal text-white/60">· entradas − saídas</span></p>
             <Money value={totals.balance} className="mt-2 block font-display text-[2.6rem] font-black leading-none tracking-tight drop-shadow-[0_6px_18px_rgba(0,0,0,.3)] md:text-6xl" />
             <div className="mt-5 max-w-sm">
               <div className="label mb-2 flex justify-between text-white/75"><span>Gasto do que entrou</span><span>{spentPct.toFixed(0)}%</span></div>
@@ -110,6 +113,12 @@ export default function Dashboard() {
         <Stat label="Lucro motorista" money={driver.netProfit} tone={driver.netProfit >= 0 ? 'info' : 'bad'} icon={<Car />} sub={`${formatBRL(driver.gross)} bruto · ${driver.daysWorked} ${driver.daysWorked === 1 ? 'dia' : 'dias'}`} />
       </div>
 
+      {isCurrent && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ProjectionCard today={localISODate()} />
+          <UpcomingCard today={localISODate()} />
+        </div>
+      )}
       </>}
 
       <form onSubmit={async (e) => {
@@ -117,7 +126,9 @@ export default function Dashboard() {
         const p = parseQuickEntry(quick);
         // Sem valor reconhecido: abre o formulário para completar.
         if (!p) { quickAdd({ text: quick }); setQuick(''); return; }
+        const alert = p.type === 'expense' ? budgetAlert(data.budgets, data.transactions, data.fixed, p.category, p.date.slice(0, 7), p.amount) : null;
         const saved = await insert('transactions', { ...p, vehicleId: null });
+        if (saved && alert) setTimeout(() => toast(alert.text, alert.kind), 400);
         if (saved) {
           setQuick('');
           toast(`${p.type === 'income' ? 'Receita' : 'Despesa'} de ${formatBRL(p.amount)} lançada · ${p.category}`, 'ok', { label: 'Editar', onClick: () => quickAdd({ editing: saved[0] }) });
@@ -139,6 +150,8 @@ export default function Dashboard() {
           </ul>
         </Card>
       )}
+
+      <BudgetCard month={month} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title={<><PieChart size={14} className="text-rose-400" /> Categorias</>}><Donut data={cats} /></Card>

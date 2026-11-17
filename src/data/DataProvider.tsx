@@ -12,7 +12,7 @@ const byCreatedAsc = (a: any, b: any) => (a.createdAt ?? '').localeCompare(b.cre
 const SORT: Record<CollectionKey, (a: any, b: any) => number> = {
   transactions: byDateDesc, sessions: byDateDesc, vehicleExpenses: byDateDesc,
   goals: byCreatedDesc, shopping: byCreatedDesc, fixedPayments: byCreatedDesc,
-  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc, accounts: byCreatedAsc, cards: byCreatedAsc,
+  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc, accounts: byCreatedAsc, cards: byCreatedAsc, budgets: byCreatedAsc,
 };
 
 interface DataApi {
@@ -107,8 +107,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (k === 'transactions') {
       const t = (data.transactions as any[]).find((x) => x.id === id);
       if (t?.transferGroup) ops.del!.transactions = (data.transactions as any[]).filter((x) => x.transferGroup === t.transferGroup).map((x) => x.id);
+      // Apagar o lançamento de uma conta fixa paga desmarca o pagamento.
+      if (t?.internal === 'fixed-payment') ops.del!.fixedPayments = (data.fixedPayments as any[]).filter((p) => p.transactionId === id).map((p) => p.id);
     }
     if (k === 'accounts' || k === 'cards') return false; // contas e cartões são arquivados, não apagados
+    // Desmarcar conta fixa paga: desfaz também a saída/entrada na conta.
+    if (k === 'fixedPayments') {
+      const p = (data.fixedPayments as any[]).find((x) => x.id === id);
+      if (p?.transactionId) ops.del!.transactions = [p.transactionId];
+    }
     if (k === 'vehicles') {
       ops.del!.vehicleExpenses = data.vehicleExpenses.filter((e) => e.vehicleId === id).map((e) => e.id);
       ops.put!.sessions = data.sessions.filter((s) => s.vehicleId === id).map((s) => ({ ...s, vehicleId: null }));

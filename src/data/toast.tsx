@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 type Action = { label: string; onClick: () => void };
-type Toast = { id: number; kind: 'ok' | 'error'; text: string; action?: Action };
+type Toast = { id: number; kind: 'ok' | 'error' | 'warn'; text: string; action?: Action };
 type Push = (text: string, kind?: Toast['kind'], action?: Action) => void;
 const Ctx = createContext<Push>(() => {});
 
@@ -11,7 +11,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const push = useCallback<Push>((text, kind = 'ok', action) => {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t.slice(-2), { id, kind, text, action }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), kind === 'error' ? 8000 : action ? 5000 : 2600);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), kind === 'error' ? 8000 : kind === 'warn' || action ? 5500 : 2600);
   }, []);
 
   // Qualquer erro inesperado aparece na tela, em vez de falhar em silêncio.
@@ -28,7 +28,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[100] flex flex-col items-center gap-2 px-4">
         {toasts.map((t) => (
-          <div key={t.id} role={t.kind === 'error' ? 'alert' : 'status'} className={`pop-in pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-2xl shadow-black/60 backdrop-blur ${t.kind === 'ok' ? 'border-emerald-500/30 bg-emerald-950/95 text-emerald-100' : 'border-rose-500/40 bg-rose-950/95 text-rose-100'}`}>
+          <div key={t.id} role={t.kind === 'error' ? 'alert' : 'status'} className={`pop-in pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-2xl shadow-black/60 backdrop-blur ${t.kind === 'ok' ? 'border-emerald-500/30 bg-emerald-950/95 text-emerald-100' : t.kind === 'warn' ? 'border-amber-500/40 bg-amber-950/95 text-amber-100' : 'border-rose-500/40 bg-rose-950/95 text-rose-100'}`}>
             {t.kind === 'ok' ? <CheckCircle2 size={18} className="shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
             <span className="flex-1">{t.text}</span>
             {t.action && (

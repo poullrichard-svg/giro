@@ -15,6 +15,7 @@ export default function Transactions() {
   const sourceLabel = (t: Transaction) => {
     if (t.internal === 'transfer') return `Transferência · ${accName.get(t.accountId ?? '') ?? ''}`;
     if (t.internal === 'invoice-payment') return `Pagamento de fatura · ${accName.get(t.accountId ?? '') ?? ''}`;
+    if (t.internal === 'fixed-payment') return `Conta fixa · ${accName.get(t.accountId ?? '') ?? ''} · já somada nos totais`;
     if (t.cardId) return `${t.category} · ${cardName.get(t.cardId) ?? 'Cartão'}${t.installmentCount ? ` · ${t.installmentIndex}/${t.installmentCount}` : ''} · fatura ${t.invoiceMonth?.slice(5, 7)}/${t.invoiceMonth?.slice(2, 4)}`;
     return `${t.category} · ${accName.get(t.accountId ?? '') ?? t.paymentMethod}`;
   };

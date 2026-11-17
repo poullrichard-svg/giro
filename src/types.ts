@@ -21,7 +21,7 @@ export interface Transaction {
    * Movimentação interna: transferência entre contas ou pagamento de fatura.
    * Mexe no saldo das contas, mas não conta como receita/despesa (evita contar em dobro).
    */
-  internal?: 'transfer' | 'invoice-payment' | null;
+  internal?: 'transfer' | 'invoice-payment' | 'fixed-payment' | null;
   transferGroup?: string | null;
 }
 
@@ -65,6 +65,8 @@ export interface FixedPayment {
   month: string; // YYYY-MM
   amount: number;
   paidAt: string;
+  /** Lançamento (interno) que tirou/colocou o dinheiro na conta. */
+  transactionId?: string | null;
 }
 
 /** Tipo de serviço: transporte de passageiros, entregas, ou trabalho fixo/diária. */
@@ -166,4 +168,11 @@ export interface WorkProfile {
   types: string[];
   platforms: Platform[];
   dailyGoal: number;
+}
+
+/** Limite mensal de gastos para uma categoria. */
+export interface Budget {
+  id: string;
+  category: string;
+  limit: number;
 }

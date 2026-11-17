@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { ArrowDownCircle, ArrowUpCircle, CalendarClock, CheckCircle2, Pencil, Plus, Repeat } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
+import { usePayFixed } from '../data/actions';
 import { AddCard, Button, Card, Check, ConfirmDelete, Empty, Field, IconButton, Input, Modal, MoneyInput, PageHeader, PeriodNav, Progress, Row, Segmented, Select, Stat } from '../components/ui';
 import { hasErrors, rules, validate, type Errors } from '../lib/validate';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../lib/categories';
@@ -12,6 +13,7 @@ const blank = (): Omit<FixedBill, 'id'> => ({ description: '', amount: 0, type: 
 
 export default function FixedBills() {
   const { data, insert, update, remove } = useData();
+  const payFixed = usePayFixed();
   const toast = useToast();
   const [month, setMonth] = useState(currentMonth());
   const [open, setOpen] = useState(false);
@@ -53,7 +55,7 @@ export default function FixedBills() {
   const togglePaid = async (bill: FixedBill) => {
     const p = paidMap.get(bill.id);
     if (p) await remove('fixedPayments', p.id);
-    else await insert('fixedPayments', { fixedId: bill.id, month, amount: bill.amount });
+    else await payFixed(bill, month);
   };
 
   const BillRow = ({ b }: { b: FixedBill }) => {

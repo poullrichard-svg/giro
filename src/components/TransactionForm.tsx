@@ -8,6 +8,7 @@ import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, PAYMENT_METHODS } from '../lib/c
 import { formatBRL, formatDate, localISODate, monthLabel } from '../lib/format';
 import { parseQuickEntry } from '../lib/quickParse';
 import { hasErrors, rules, validate, type Errors } from '../lib/validate';
+import { budgetAlert } from '../lib/planning';
 import { newId } from '../data/db';
 import { Button, Field, Input, Modal, MoneyInput, NumberInput, Segmented, Select, cx } from './ui';
 
@@ -92,6 +93,13 @@ export default function TransactionForm({ open, onClose, preset }: { open: boole
       ok = !!(await insert('transactions', { ...base, paymentMethod: f.paymentMethod, accountId: f.source.slice(4) }));
     }
     setBusy(false);
+    // Avisa se este gasto fez a categoria passar de 80% ou de 100% do limite do mês.
+    if (ok && !editing && f.type === 'expense') {
+      const month = card ? invoiceMonthFor(f.date, card) : f.date.slice(0, 7);
+      const added = card ? f.amount / Math.max(1, f.installments) : f.amount;
+      const alert = budgetAlert(data.budgets, data.transactions, data.fixed, f.category, month, added);
+      if (alert) setTimeout(() => toast(alert.text, alert.kind), 400);
+    }
     if (ok) {
       toast(editing ? 'Lançamento atualizado' : card && f.installments > 1 ? `Compra de ${formatBRL(f.amount)} em ${f.installments}x lançada` : `${f.type === 'income' ? 'Receita' : 'Despesa'} de ${formatBRL(f.amount)} lançada`);
       onClose();
