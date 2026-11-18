@@ -1,6 +1,6 @@
 import { createContext, lazy, Suspense, useContext, useState, type ReactNode } from 'react';
 import {
-  Calculator, Car, CarFront, Flag, Landmark, LayoutDashboard, Menu, Plus, Repeat, ShoppingCart, Wallet,
+  Calculator, Car, CarFront, Flag, Landmark, LayoutDashboard, Menu, Plus, Repeat, ShoppingCart, Sparkles, Wallet,
 } from 'lucide-react';
 import { go, useRoute, type Route } from '../router';
 import { useData } from '../data/DataProvider';
@@ -18,6 +18,7 @@ const Calculators = lazy(() => import('../pages/calculators/Calculators'));
 const Goals = lazy(() => import('../pages/Goals'));
 const Shopping = lazy(() => import('../pages/Shopping'));
 const More = lazy(() => import('../pages/More'));
+const Assistant = lazy(() => import('../pages/Assistant'));
 
 const NAV: Array<{ id: Route; label: string; icon: typeof Wallet }> = [
   { id: 'inicio', label: 'Início', icon: LayoutDashboard },
@@ -29,6 +30,7 @@ const NAV: Array<{ id: Route; label: string; icon: typeof Wallet }> = [
   { id: 'calculadoras', label: 'Calculadoras', icon: Calculator },
   { id: 'metas', label: 'Metas', icon: Flag },
   { id: 'compras', label: 'Lista de compras', icon: ShoppingCart },
+  { id: 'assistente', label: 'Assistente IA', icon: Sparkles },
 ];
 const MOBILE: Route[] = ['inicio', 'lancamentos', 'motorista', 'mais'];
 
@@ -44,7 +46,7 @@ export default function Shell() {
 
   const page: Record<Route, ReactNode> = {
     inicio: <Dashboard />, lancamentos: <Transactions />, contas: <Accounts id={param} />, fixas: <FixedBills />, motorista: <Driver />,
-    veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, metas: <Goals id={param} />, compras: <Shopping />, mais: <More />,
+    veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, metas: <Goals id={param} />, compras: <Shopping />, assistente: <Assistant />, mais: <More section={param} />,
   };
 
   const loader = <div className="flex flex-col items-center gap-3 py-24 text-slate-400"><Logo size={48} spin /><span className="label">Abrindo seus dados</span></div>;

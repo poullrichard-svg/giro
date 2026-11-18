@@ -8,11 +8,12 @@ import { Button, Card, Field, MoneyInput, NumberInput } from '../components/ui';
 import { rules } from '../lib/validate';
 import { downloadCSV } from '../lib/csv';
 import { ImportStatement } from '../components/ImportStatement';
+import { AISettings } from '../components/AISettings';
 import { daysUntil, formatDate, localISODate } from '../lib/format';
 
 const readLastBackup = () => { try { return localStorage.getItem(BACKUP_KEY); } catch { return null; } };
 
-export default function More() {
+export default function More({ section }: { section?: string }) {
   const { data, persisted, engine, replaceAll } = useData();
   const toast = useToast();
   const [lastBackup, setLastBackup] = useState(readLastBackup);
@@ -48,6 +49,7 @@ export default function More() {
         ))}
       </div>
 
+      <AISettings focus={section === 'ia'} />
       <Card title={<span className="flex items-center gap-2"><HardDrive size={16} /> Onde ficam seus dados</span>}>
         <p className="text-sm text-slate-400">Tudo fica salvo <strong className="text-slate-200">neste aparelho e neste navegador</strong> — sem servidor, sem login e funciona sem internet. São {total} registros guardados.</p>
         <ul className="mt-3 space-y-1.5 text-xs text-slate-400">
