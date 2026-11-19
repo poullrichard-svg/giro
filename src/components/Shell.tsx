@@ -1,6 +1,6 @@
 import { createContext, lazy, Suspense, useContext, useState, type ReactNode } from 'react';
 import {
-  Calculator, Car, CarFront, Flag, Landmark, LayoutDashboard, Menu, Plus, Repeat, ShoppingCart, Sparkles, Wallet,
+  Calculator, Car, CarFront, Flag, Landmark, LayoutDashboard, Menu, Plus, BarChart3, Repeat, ShoppingCart, Sparkles, Wallet,
 } from 'lucide-react';
 import { go, useRoute, type Route } from '../router';
 import { useData } from '../data/DataProvider';
@@ -8,6 +8,7 @@ import { Logo } from './Logo';
 import TransactionForm, { type TxPreset } from './TransactionForm';
 import { cx } from './ui';
 import { SyncBox, SyncDot } from '../cloud/SyncBadge';
+import { useCloud } from '../cloud/CloudProvider';
 
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const Transactions = lazy(() => import('../pages/Transactions'));
@@ -20,6 +21,7 @@ const Goals = lazy(() => import('../pages/Goals'));
 const Shopping = lazy(() => import('../pages/Shopping'));
 const More = lazy(() => import('../pages/More'));
 const Assistant = lazy(() => import('../pages/Assistant'));
+const Admin = lazy(() => import('../pages/Admin'));
 
 const NAV: Array<{ id: Route; label: string; icon: typeof Wallet }> = [
   { id: 'inicio', label: 'Início', icon: LayoutDashboard },
@@ -41,17 +43,19 @@ export const useQuickAdd = () => useContext(QuickAddCtx);
 export default function Shell() {
   const { route, param } = useRoute();
   const { loading } = useData();
+  const { isAdmin } = useCloud();
+  const sideNav = [...NAV, ...(isAdmin ? [{ id: 'admin' as Route, label: 'Painel admin', icon: BarChart3 }] : []), { id: 'mais' as Route, label: 'Ajustes', icon: Menu }];
   const [txOpen, setTxOpen] = useState(false);
   const [preset, setPreset] = useState<TxPreset | undefined>();
   const openTx = (p?: TxPreset) => { setPreset(p); setTxOpen(true); };
 
   const page: Record<Route, ReactNode> = {
     inicio: <Dashboard />, lancamentos: <Transactions />, contas: <Accounts id={param} />, fixas: <FixedBills />, motorista: <Driver />,
-    veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, metas: <Goals id={param} />, compras: <Shopping />, assistente: <Assistant />, mais: <More section={param} />,
+    veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, metas: <Goals id={param} />, compras: <Shopping />, assistente: <Assistant />, admin: <Admin />, mais: <More section={param} />,
   };
 
   const loader = <div className="flex flex-col items-center gap-3 py-24 text-slate-400"><Logo size={48} spin /><span className="label">Abrindo seus dados</span></div>;
-  const current = [...NAV, { id: 'mais' as Route, label: 'Ajustes', icon: Menu }].find((n) => n.id === route);
+  const current = sideNav.find((n) => n.id === route);
 
   return (
     <QuickAddCtx.Provider value={openTx}>
@@ -67,7 +71,7 @@ export default function Shell() {
             </div>
           </a>
           <nav className="stagger-x flex-1 space-y-1.5 overflow-y-auto px-4">
-            {[...NAV, { id: 'mais' as Route, label: 'Ajustes', icon: Menu }].map((n) => {
+            {sideNav.map((n) => {
               const active = route === n.id;
               return (
                 <a key={n.id} href={`#/${n.id}`} className={cx('group relative flex items-center gap-3.5 rounded-2xl px-3 py-2.5 text-[14px] font-bold transition-all duration-300', active ? 'bg-gradient-to-r from-brand-500/20 to-transparent text-white' : 'text-slate-500 hover:translate-x-1 hover:bg-white/[.03] hover:text-slate-200')}>

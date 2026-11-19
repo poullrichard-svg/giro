@@ -3,6 +3,7 @@ import { useData } from '../data/DataProvider';
 import { enqueueAll, getOutbox, setTracking, wipeLocal } from '../data/db';
 import { useToast } from '../data/toast';
 import { cloudEnabled, getSupabase, supabaseRemote, authMessage } from './supabase';
+import { fetchIsAdmin, fetchMyProfile, readCachedProfile, saveMyProfile, writeCachedProfile, type Profile } from './profile';
 import { CURSOR_KEY, OWNER_KEY, onLocalChange, refreshPending, resetSyncStatus, syncNow, syncStorage as ls } from './sync';
 
 export interface CloudUser { id: string; email: string }
@@ -23,6 +24,11 @@ interface CloudApi {
   signOut: () => Promise<boolean>;
   deleteAccount: () => Promise<string | null>;
   sync: () => Promise<void>;
+  /** Perfil: 'missing' = precisa preencher; 'unavailable' = sem internet ou banco sem a tabela (não bloqueia o app). */
+  profile: Profile | null;
+  profileStatus: 'loading' | 'ready' | 'missing' | 'unavailable';
+  saveProfile: (p: Profile) => Promise<void>;
+  isAdmin: boolean;
 }
 
 const Ctx = createContext<CloudApi | null>(null);
@@ -41,6 +47,9 @@ export function CloudProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CloudUser | null>(null);
   const [recovery, setRecovery] = useState(false);
   const [choice, setChoice] = useState<((c: Choice) => void) | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileStatus, setProfileStatus] = useState<CloudApi['profileStatus']>('loading');
+  const [isAdmin, setIsAdmin] = useState(false);
   const dataRef = useRef(data); dataRef.current = data;
   const handled = useRef<string | null>(null);
 
@@ -92,6 +101,27 @@ export function CloudProvider({ children }: { children: ReactNode }) {
   // Ao entrar (ou abrir o app já logado): ajusta os dados e sincroniza.
   useEffect(() => { if (user) adopt(user).catch((e) => { console.error(e); toast('Não foi possível sincronizar agora.', 'error'); }); }, [user, adopt, toast]);
 
+  // Perfil e permissão de administrador.
+  useEffect(() => {
+    if (!user) { setProfile(null); setProfileStatus('loading'); setIsAdmin(false); return; }
+    let alive = true;
+    const cached = readCachedProfile(user.id);
+    if (cached) { setProfile(cached); setProfileStatus('ready'); }
+    fetchMyProfile().then((p) => {
+      if (!alive) return;
+      writeCachedProfile(user.id, p);
+      setProfile(p); setProfileStatus(p ? 'ready' : 'missing');
+    }).catch((e) => { console.warn('perfil', e); if (alive && !cached) setProfileStatus('unavailable'); });
+    fetchIsAdmin().then((a) => { if (alive) setIsAdmin(a); });
+    return () => { alive = false; };
+  }, [user]);
+
+  const saveProfile: CloudApi['saveProfile'] = async (p) => {
+    const saved = await saveMyProfile(p);
+    if (user) writeCachedProfile(user.id, saved);
+    setProfile(saved); setProfileStatus('ready');
+  };
+
   // Gatilhos: depois de gravar (com pausa), ao voltar a internet, ao voltar para o app e a cada minuto.
   useEffect(() => {
     if (!user) return;
@@ -128,6 +158,7 @@ export function CloudProvider({ children }: { children: ReactNode }) {
   /** Sai e apaga os dados deste aparelho (ficam guardados na conta). */
   const finishSignOut = async () => {
     const sb = await getSupabase();
+    if (user) writeCachedProfile(user.id, null);
     await sb.auth.signOut({ scope: 'local' });
     setTracking(false); await wipeLocal();
     ls.del(OWNER_KEY); ls.del(CURSOR_KEY); handled.current = null; resetSyncStatus();
@@ -150,6 +181,6 @@ export function CloudProvider({ children }: { children: ReactNode }) {
     } catch (e) { return authMessage(e); }
   };
 
-  const api: CloudApi = { enabled: cloudEnabled, ready, user, recovery, choice, signIn, signUp, resetPassword, updatePassword, signOut, deleteAccount, sync: runSync };
+  const api: CloudApi = { enabled: cloudEnabled, ready, user, recovery, choice, signIn, signUp, resetPassword, updatePassword, signOut, deleteAccount, sync: runSync, profile, profileStatus, saveProfile, isAdmin };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

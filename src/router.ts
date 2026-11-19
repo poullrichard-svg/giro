@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-export type Route = 'inicio' | 'lancamentos' | 'contas' | 'fixas' | 'motorista' | 'veiculos' | 'calculadoras' | 'metas' | 'compras' | 'assistente' | 'mais';
-const ROUTES: Route[] = ['inicio', 'lancamentos', 'contas', 'fixas', 'motorista', 'veiculos', 'calculadoras', 'metas', 'compras', 'assistente', 'mais'];
+export type Route = 'inicio' | 'lancamentos' | 'contas' | 'fixas' | 'motorista' | 'veiculos' | 'calculadoras' | 'metas' | 'compras' | 'assistente' | 'admin' | 'mais';
+const ROUTES: Route[] = ['inicio', 'lancamentos', 'contas', 'fixas', 'motorista', 'veiculos', 'calculadoras', 'metas', 'compras', 'assistente', 'admin', 'mais'];
 
 const parse = (): { route: Route; param?: string } => {
   const [r, param] = window.location.hash.replace(/^#\/?/, '').split('/');

@@ -41,3 +41,12 @@ que só deixam cada usuário ver e alterar o que é dele. **Nunca** coloque a *s
 - Primeiro login num aparelho que já tinha dados: os dados sobem para a conta
   (se a conta já tiver dados, o app pergunta se junta ou usa só os da conta).
 - Sair apaga os dados do aparelho (continuam na conta). Excluir conta apaga tudo (`delete_account`).
+
+## Perfil e painel do administrador
+1. No SQL Editor, rode [`supabase/02_perfil.sql`](../supabase/02_perfil.sql) (depois do `giro.sql`).
+2. Para se tornar administrador, rode no SQL Editor (troque o e-mail):
+   ```sql
+   insert into public.admins select id from auth.users where email = 'SEU-EMAIL' on conflict do nothing;
+   ```
+3. O painel (Ajustes → Conta → Painel do administrador) mostra só médias de quem marcou
+   "participar das estatísticas". Grupos com menos de 5 pessoas não aparecem.

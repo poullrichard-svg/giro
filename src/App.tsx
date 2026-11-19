@@ -5,6 +5,7 @@ import { CloudProvider, useCloud } from './cloud/CloudProvider';
 import { MergeChoiceModal, NewPasswordModal } from './cloud/Login';
 import { Logo } from './components/Logo';
 import Shell from './components/Shell';
+import { ProfileSetup } from './cloud/ProfileForm';
 
 const Login = lazy(() => import('./cloud/Login'));
 
@@ -14,10 +15,12 @@ const Splash = () => (
 
 /** Com Supabase configurado, o app pede login; sem ele, roda no modo local. */
 function Gate() {
-  const { enabled, ready, user } = useCloud();
+  const { enabled, ready, user, profileStatus } = useCloud();
   if (!enabled) return <Shell />;
   if (!ready) return <Splash />;
   if (!user) return <Suspense fallback={<Splash />}><Login /></Suspense>;
+  if (profileStatus === 'loading') return <Splash />;
+  if (profileStatus === 'missing') return <ProfileSetup />;
   return <><Shell /><MergeChoiceModal /><NewPasswordModal /></>;
 }
 

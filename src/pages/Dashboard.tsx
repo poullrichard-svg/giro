@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { useCloud } from '../cloud/CloudProvider';
+import { firstName } from '../cloud/profile';
 import { AlertTriangle, ArrowDown, ArrowDownCircle, ArrowUp, ArrowUpCircle, BarChart3, Bell, Car, CalendarClock, HardDriveDownload, PieChart, Sparkles, Wallet } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useQuickAdd } from '../components/Shell';
@@ -46,6 +48,7 @@ export default function Dashboard() {
     return last ? -daysUntil(last.slice(0, 10)) : Infinity;
   }, [data.transactions.length, backupTick]);
   const hour = new Date().getHours();
+  const name = firstName(useCloud().profile);
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
   const today = (() => { const s = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }); return s.charAt(0).toUpperCase() + s.slice(1); })();
   const spentPct = totals.income > 0 ? Math.min(100, (totals.expense / totals.income) * 100) : totals.expense > 0 ? 100 : 0;
@@ -60,7 +63,7 @@ export default function Dashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="label text-brand-300">{today}</p>
-          <h1 className="mt-1.5 font-display text-3xl font-black tracking-tight text-white md:text-4xl">{greeting}! <span className="inline-block origin-[70%_70%] animate-[wave_2.4s_ease-in-out_1]">👋</span></h1>
+          <h1 className="mt-1.5 font-display text-3xl font-black tracking-tight text-white md:text-4xl">{greeting}{name ? `, ${name}` : ''}! <span className="inline-block origin-[70%_70%] animate-[wave_2.4s_ease-in-out_1]">👋</span></h1>
         </div>
         <PeriodNav label={monthLabel(month)} onPrev={() => setMonth(addMonths(month, -1))} onNext={() => setMonth(addMonths(month, 1))} onToday={() => setMonth(currentMonth())} />
       </div>
