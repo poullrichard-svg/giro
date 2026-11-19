@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { COLLECTIONS, getAll, getEngine, newId, requestPersistence, write, type CollectionKey, type Collections, type Engine } from './db';
 import { useToast } from './toast';
+import { cloudEnabled } from '../cloud/supabase';
+import { emitLocalChange, initialPullDone } from '../cloud/sync';
 
 type Store = { [K in CollectionKey]: Collections[K][] };
 const EMPTY = Object.fromEntries(COLLECTIONS.map((c) => [c, []])) as unknown as Store;
@@ -26,6 +28,8 @@ interface DataApi {
   /** Grava um registro com id fixo (cria ou substitui). */
   put: <K extends CollectionKey>(k: K, item: Collections[K]) => Promise<boolean>;
   replaceAll: (data: Partial<Record<CollectionKey, any[]>>) => Promise<boolean>;
+  /** Relê o banco do aparelho (ex.: depois de baixar dados da nuvem). */
+  reload: () => Promise<void>;
 }
 
 const Ctx = createContext<DataApi | null>(null);
@@ -43,7 +47,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const store = Object.fromEntries(entries) as unknown as Store;
     // Primeira abertura (ou vindo de versão antiga): cria a conta "Carteira" e coloca nela
     // os lançamentos que ainda não têm conta nem cartão.
-    if (store.accounts.length === 0) {
+    // Com login, espera o primeiro download da conta (a Carteira pode já existir na nuvem).
+    if (store.accounts.length === 0 && (!cloudEnabled || initialPullDone())) {
       const now = new Date().toISOString();
       const wallet = { id: newId(), name: 'Carteira', kind: 'carteira', color: '#22c55e', initialBalance: 0, createdAt: now, updatedAt: now };
       const orphan = (store.transactions as any[]).filter((t) => !t.accountId && !t.cardId).map((t) => ({ ...t, accountId: wallet.id }));
@@ -74,6 +79,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await write(ops);
       await load();
       channel?.postMessage('changed');
+      emitLocalChange();
       return true;
     } catch (e: any) {
       console.error(e);
@@ -142,7 +148,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return commit({ clear: [...COLLECTIONS], put });
   }, [commit]);
 
-  const api = useMemo(() => ({ data, loading, persisted, engine, insert, update, remove, put, replaceAll }), [data, loading, persisted, engine, insert, update, remove, put, replaceAll]);
+  const reload = useCallback(async () => { await load(); channel?.postMessage('changed'); }, [load]);
+  const api = useMemo(() => ({ data, loading, persisted, engine, insert, update, remove, put, replaceAll, reload }), [data, loading, persisted, engine, insert, update, remove, put, replaceAll, reload]);
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }
 

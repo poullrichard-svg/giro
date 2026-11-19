@@ -7,6 +7,7 @@ import { useData } from '../data/DataProvider';
 import { Logo } from './Logo';
 import TransactionForm, { type TxPreset } from './TransactionForm';
 import { cx } from './ui';
+import { SyncBox, SyncDot } from '../cloud/SyncBadge';
 
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const Transactions = lazy(() => import('../pages/Transactions'));
@@ -79,10 +80,7 @@ export default function Shell() {
               );
             })}
           </nav>
-          <div className="m-4 rounded-2xl border border-emerald-500/15 bg-emerald-500/[.05] p-3.5">
-            <p className="label flex items-center gap-2 text-emerald-400"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_10px] shadow-emerald-400" /> Modo local</p>
-            <p className="mt-1 text-[11px] font-medium text-slate-400">Seus dados ficam salvos neste aparelho.</p>
-          </div>
+          <SyncBox />
         </aside>
 
         <div className="min-w-0 flex-1">
@@ -96,7 +94,7 @@ export default function Shell() {
 
           <main className="px-4 pb-36 pt-[max(1rem,env(safe-area-inset-top))] md:px-8 md:pb-12 md:pt-8">
             {/* Celular: topo */}
-            <div className="mb-5 flex items-center gap-2.5 md:hidden"><Logo size={34} /><span className="font-display text-2xl font-black tracking-tight text-white">giro</span></div>
+            <div className="mb-5 flex items-center gap-2.5 md:hidden"><Logo size={34} /><span className="font-display text-2xl font-black tracking-tight text-white">giro</span><SyncDot /></div>
             <div className="mx-auto max-w-6xl">
               {loading ? loader : (
                 <Suspense fallback={loader}>
