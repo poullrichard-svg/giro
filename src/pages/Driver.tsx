@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Briefcase, CalendarDays, Car, CircleDollarSign, Package, Pencil, Plus, SlidersHorizontal, Smartphone, Target, TrendingDown, TrendingUp, Wrench } from 'lucide-react';
 import { useData } from '../data/DataProvider';
+import { usePrefs } from '../data/usePrefs';
 import { useToast } from '../data/toast';
 import { BigTile, Button, Card, ConfirmDelete, Empty, Field, IconButton, IconChip, Input, MiniStat, Modal, MoneyInput, NumberInput, PageHeader, PeriodNav, Progress, Row, Segmented, Select, cx } from '../components/ui';
 import { hasErrors, rules, validate, type Errors } from '../lib/validate';
@@ -22,7 +23,17 @@ const legacyGoal = () => { try { return Number(localStorage.getItem('giro.driver
 
 export default function Driver() {
   const { data } = useData();
+  const { driver, setDriver } = usePrefs();
   const profile = data.settings.find((x) => x.id === PROFILE_ID) ?? null;
+  if (!driver) {
+    return (
+      <div className="mx-auto max-w-xl">
+        <PageHeader eyebrow="Motorista e entregador" title="Painel do motorista" subtitle="Ganhos por dia, por app e por hora, custos do carro ou da moto e a meta do dia." />
+        <Empty icon={<Car size={28} />} title="O modo motorista está desligado" text="Ligue se você trabalha com Uber, 99, iFood, entregas ou diárias. Dá para desligar de novo em Ajustes."
+          action={<Button onClick={() => setDriver(true)}><Car size={16} /> Ligar modo motorista</Button>} />
+      </div>
+    );
+  }
   if (!profile) {
     return (
       <div className="mx-auto max-w-3xl">

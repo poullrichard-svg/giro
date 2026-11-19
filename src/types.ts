@@ -248,3 +248,12 @@ export interface Debt {
   installments: DebtInstallment[];
   notes?: string | null;
 }
+
+/** Preferências do app (um registro só, id "app"). Sincroniza entre aparelhos. */
+export interface AppPrefs {
+  id: string;
+  /** Modo motorista/entregador. null = decide sozinho (perfil, turnos registrados). */
+  driver?: boolean | null;
+  /** Abas ligadas/desligadas pelo usuário. Ausente = padrão. */
+  tabs?: Record<string, boolean>;
+}

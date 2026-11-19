@@ -1,5 +1,6 @@
 import { CheckCircle2, ChevronRight, CreditCard, HardDriveDownload, Car, Repeat, Sparkles } from 'lucide-react';
 import { useData } from '../data/DataProvider';
+import { usePrefs } from '../data/usePrefs';
 import { PROFILE_ID } from '../lib/work';
 import { useQuickAdd } from './Shell';
 import { Logo } from './Logo';
@@ -9,11 +10,14 @@ import { cx } from './ui';
 export function Welcome() {
   const { data } = useData();
   const quickAdd = useQuickAdd();
+  const { driver } = usePrefs();
   const steps = [
     { done: data.transactions.length > 0, icon: Sparkles, title: 'Faça seu primeiro lançamento', text: 'Toque aqui ou escreva como falaria: "gastei 35 no almoço no pix".', action: () => quickAdd() },
     { done: data.accounts.length > 1 || data.cards.length > 0 || data.accounts.some((a) => a.initialBalance !== 0), icon: CreditCard, title: 'Cadastre suas contas e cartões', text: 'Já criamos a "Carteira". Adicione seu banco, o saldo de hoje e seus cartões.', href: '#/contas' },
     { done: data.fixed.length > 0, icon: Repeat, title: 'Anote as contas fixas', text: 'Aluguel, luz, internet, salário — o app avisa antes de vencer.', href: '#/fixas' },
-    { done: data.settings.some((s) => s.id === PROFILE_ID), icon: Car, title: 'Trabalha com app ou entregas? (opcional)', text: 'Configure o painel do motorista do seu jeito.', href: '#/motorista' },
+    driver
+      ? { done: data.settings.some((s) => s.id === PROFILE_ID), icon: Car, title: 'Configure o painel do motorista', text: 'Escolha seus aplicativos e a meta do dia.', href: '#/motorista' }
+      : { done: false, icon: Car, title: 'Trabalha com app ou entregas? (opcional)', text: 'Ligue o modo motorista em Ajustes para ter o painel de ganhos.', href: '#/mais/abas' },
     { done: false, icon: HardDriveDownload, title: 'Lembre do backup', text: 'Seus dados ficam no aparelho. Em Ajustes você baixa uma cópia.', href: '#/mais' },
   ];
   const doneCount = steps.filter((s) => s.done).length;

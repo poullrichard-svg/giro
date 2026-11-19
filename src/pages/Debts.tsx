@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BadgeCheck, Check, ExternalLink, Flame, HandCoins, Lightbulb, Pencil, Plus, Rocket, Snowflake, Trash2, TriangleAlert, Trophy, Undo2 } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, Building2, CalendarClock, Check, CreditCard, GraduationCap, Handshake, Landmark, Receipt, Users, ExternalLink, Flame, HandCoins, Lightbulb, Pencil, Plus, Rocket, Snowflake, Trash2, TriangleAlert, Trophy, Undo2 } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
 import { usePayDebt } from '../data/actions';
 import { newId } from '../data/db';
-import { AddCard, Button, Card, Empty, Field, Input, Modal, Money, MoneyInput, NumberInput, PageHeader, Row, Segmented, Select, cx } from '../components/ui';
+import { AddCard, Button, Card, Empty, Field, Input, Modal, Money, MoneyInput, NumberInput, PageHeader, Row, Segmented, Select, Tilt, cx } from '../components/ui';
 import { Celebration } from '../components/Celebration';
 import { EXPENSE_CATEGORIES } from '../lib/categories';
 import { addDays, formatBRL, formatDate, localISODate, monthLabel } from '../lib/format';
@@ -26,6 +26,55 @@ const TOOLS = [
   { name: 'Registrato (Banco Central)', text: 'Grátis: mostra todos os empréstimos, cartões e financiamentos no seu nome.', url: 'https://www.bcb.gov.br/cidadaniafinanceira/registrato' },
   { name: 'consumidor.gov.br', text: 'Reclame e negocie direto com empresas e bancos. Grátis.', url: 'https://www.consumidor.gov.br/' },
 ];
+
+/** Ícone e cor de cada tipo de dívida. */
+const KIND_LOOK: Record<DebtKind, { icon: typeof HandCoins; color: string }> = {
+  acordo: { icon: Handshake, color: '#f97316' }, faculdade: { icon: GraduationCap, color: '#8b5cf6' }, cartao: { icon: CreditCard, color: '#e11d48' },
+  emprestimo: { icon: Landmark, color: '#0ea5e9' }, financiamento: { icon: Building2, color: '#14b8a6' }, contas: { icon: Receipt, color: '#f59e0b' },
+  pessoal: { icon: Users, color: '#ec4899' }, outro: { icon: HandCoins, color: '#64748b' },
+};
+const lookOf = (k: DebtKind) => KIND_LOOK[k] ?? KIND_LOOK.outro;
+
+/** Etiqueta de situação: quitada, atrasada, vence logo ou em dia. */
+function StatusChip({ st }: { st: ReturnType<typeof debtStatus> }) {
+  const [cls, text] = st.done ? ['bg-emerald-400/15 text-emerald-300 ring-emerald-400/30', 'Quitada']
+    : st.overdue.length ? ['bg-rose-500/20 text-rose-200 ring-rose-400/40', `Atrasada ${-(st.nextDays ?? 0)} ${st.nextDays === -1 ? 'dia' : 'dias'}`]
+    : st.nextDays != null && st.nextDays <= 7 ? ['bg-amber-400/15 text-amber-200 ring-amber-400/30', st.nextDays === 0 ? 'Vence hoje' : st.nextDays === 1 ? 'Vence amanhã' : `Vence em ${st.nextDays} dias`]
+    : ['bg-sky-400/15 text-sky-200 ring-sky-400/30', 'Em dia'];
+  return <span className={cx('label inline-flex items-center gap-1 rounded-full px-2.5 py-1 ring-1', cls)}>{st.done ? <BadgeCheck size={12} /> : st.overdue.length ? <TriangleAlert size={12} /> : <CalendarClock size={12} />}{text}</span>;
+}
+
+/** Cartão de uma dívida na lista. */
+function DebtCard({ d, st }: { d: Debt; st: ReturnType<typeof debtStatus> }) {
+  const { icon: Icon, color } = lookOf(d.kind);
+  return (
+    <Tilt max={5} className={cx('tinted relative overflow-hidden rounded-[1.8rem] p-5', st.done && 'opacity-80')} style={{ '--tone': st.done ? '#10b981' : color } as React.CSSProperties}>
+      <span className="watermark" style={{ color }}><Icon size={120} strokeWidth={1.3} /></span>
+      <button type="button" onClick={() => go('dividas', d.id)} className="pop relative block w-full text-left" aria-label={`${d.creditor} — ${st.done ? 'quitada' : `${st.paidCount}/${st.count} pagas`}`}>
+        <div className="flex items-start gap-3">
+          <span className="solid flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={{ '--tone': st.done ? '#10b981' : color } as React.CSSProperties}>{st.done ? <Trophy size={19} /> : <Icon size={19} />}</span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-display text-[17px] font-black leading-tight text-white">{d.creditor}</p>
+            <p className="label mt-0.5 truncate text-white/50">{kindLabel(d.kind)}</p>
+          </div>
+        </div>
+        <div className="mt-4 flex items-end justify-between gap-2">
+          <div className="min-w-0">
+            <p className="label text-white/50">{st.done ? 'Tudo pago' : 'Falta'}</p>
+            <p className="truncate font-display text-[26px] font-black leading-none text-white">{formatBRL(st.done ? st.total : st.remaining)}</p>
+          </div>
+          <StatusChip st={st} />
+        </div>
+        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-black/30"><div className="fill-x h-full rounded-full" style={{ width: `${Math.max(st.pct, st.done ? 100 : 3)}%`, background: `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 45%, white))`, boxShadow: `0 0 12px ${color}` }} /></div>
+        <div className="mt-3 flex items-center justify-between gap-2 text-xs">
+          <span className="text-white/60">{st.paidCount} de {st.count} {st.count === 1 ? 'parcela' : 'parcelas'}</span>
+          {st.next && !st.done && <span className="truncate font-semibold text-white/80">Próxima: <b className="font-mono text-white">{formatBRL(st.next.amount)}</b> · {formatDate(st.next.dueDate).slice(0, 5)}</span>}
+          {st.discount > 0 && st.done && <span className="font-semibold text-emerald-200">economizou {formatBRL(st.discount)}</span>}
+        </div>
+      </button>
+    </Tilt>
+  );
+}
 
 export default function Debts({ id }: { id?: string }) {
   const { data } = useData();
@@ -104,7 +153,7 @@ function DebtList({ onNew, onSettled }: { onNew: () => void; onSettled: (n: stri
                   const days = Math.round((new Date(`${i.dueDate}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 864e5);
                   const k = [...d.installments].sort((a, b) => a.dueDate.localeCompare(b.dueDate)).findIndex((x) => x.id === i.id) + 1;
                   return (
-                    <Row key={i.id} tone={days < 0 ? 'bad' : days <= 3 ? 'warn' : 'info'} icon={<HandCoins size={16} />}
+                    <Row key={i.id} tone={days < 0 ? 'bad' : lookOf(d.kind).color} icon={(() => { const I = lookOf(d.kind).icon; return <I size={16} />; })()}
                       title={d.installments.length > 1 ? `${d.creditor} (${k}/${d.installments.length})` : d.creditor}
                       subtitle={<span className={days < 0 ? 'text-rose-400' : days <= 3 ? 'text-amber-400' : undefined}>{dueText(days)} · {formatDate(i.dueDate).slice(0, 5)}<span className="sm:hidden"> · {formatBRL(i.amount)}</span></span>}
                       amount={formatBRL(i.amount)} amountTone="bad" amountClassName="hidden sm:inline"
@@ -115,17 +164,7 @@ function DebtList({ onNew, onSettled }: { onNew: () => void; onSettled: (n: stri
             )}
           </Card>
           <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {list.map(({ d, st }) => (
-              <button key={d.id} type="button" onClick={() => go('dividas', d.id)} className={cx('surface surface-hover press rounded-[1.6rem] p-5 text-left', st.done && 'opacity-70')}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0"><p className="truncate font-display text-lg font-black text-white">{d.creditor}</p><p className="label text-slate-500">{kindLabel(d.kind)}</p></div>
-                  {st.done ? <BadgeCheck size={22} className="shrink-0 text-emerald-400" /> : st.overdue.length > 0 ? <TriangleAlert size={20} className="shrink-0 text-rose-400" /> : null}
-                </div>
-                <p className="mt-3 font-display text-2xl font-black text-white">{st.done ? 'Quitada' : formatBRL(st.remaining)}</p>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[.06]"><div className="fill-x h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300" style={{ width: `${st.pct}%` }} /></div>
-                <p className="mt-2 text-xs text-slate-400">{st.done ? `${st.count} ${st.count === 1 ? 'parcela paga' : 'parcelas pagas'}` : `${st.paidCount}/${st.count} pagas · próxima ${st.next ? formatDate(st.next.dueDate).slice(0, 5) : '—'}`}</p>
-              </button>
-            ))}
+            {list.map(({ d, st }) => <DebtCard key={d.id} d={d} st={st} />)}
             <AddCard label="Nova dívida" onClick={onNew} className="min-h-[10rem]" />
           </div>
         </div>
@@ -166,7 +205,7 @@ function StrategyCard() {
         <Field label="Se eu conseguir pagar a mais por mês"><MoneyInput value={extra} onChange={setExtra} /></Field>
         <p className="mt-3 text-sm text-slate-200" data-testid="payoff-result">
           {fast.months >= 600 ? 'Com esses valores a dívida não acaba — o juro é maior que o pagamento.' : <>
-            Livre em <b className="text-white">{fast.months} {fast.months === 1 ? 'mês' : 'meses'}</b>
+            Seguindo este plano, livre em <b className="text-white">{fast.months} {fast.months === 1 ? 'mês' : 'meses'}</b>
             {saved > 0 && <> — <b className="text-emerald-300">{saved} {saved === 1 ? 'mês' : 'meses'} antes</b></>}
             {base.interest - fast.interest > 1 && <> e economiza <b className="text-emerald-300">{formatBRL(base.interest - fast.interest)}</b> de juros</>}.
           </>}
@@ -212,9 +251,13 @@ function DebtDetail({ debt, onEdit, onSettled }: { debt: Debt; onEdit: () => voi
     <div>
       <button onClick={() => go('dividas')} className="label press mb-4 flex items-center gap-2 rounded-full bg-white/[.04] px-3.5 py-2 text-slate-400 ring-1 ring-white/10 hover:text-white"><ArrowLeft size={14} /> Dívidas</button>
       <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
-          <h1 className="truncate font-display text-2xl font-black text-white md:text-3xl">{debt.creditor}</h1>
-          <p className="label text-slate-500">{kindLabel(debt.kind)}{debt.monthlyRate ? ` · ${String(debt.monthlyRate).replace('.', ',')}% ao mês` : ''}</p>
+        <div className="flex min-w-0 items-center gap-4">
+          {(() => { const L = lookOf(debt.kind); return <span className="solid flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.4rem]" style={{ '--tone': st.done ? '#10b981' : L.color } as React.CSSProperties}>{st.done ? <Trophy size={28} /> : <L.icon size={28} />}</span>; })()}
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-2xl font-black text-white md:text-3xl">{debt.creditor}</h1>
+            <p className="label text-slate-500">{kindLabel(debt.kind)}{debt.monthlyRate ? ` · ${String(debt.monthlyRate).replace('.', ',')}% ao mês` : ''}</p>
+            <div className="mt-1.5"><StatusChip st={st} /></div>
+          </div>
         </div>
         <Button variant="soft" onClick={onEdit}><Pencil size={15} /> Editar</Button>
       </div>
@@ -223,7 +266,7 @@ function DebtDetail({ debt, onEdit, onSettled }: { debt: Debt; onEdit: () => voi
           <div key={l} className="surface rounded-[1.5rem] p-4"><p className="label text-slate-500">{l}</p><p className="mt-1 break-words font-display text-lg font-black text-white md:text-xl">{v}</p></div>
         ))}
       </div>
-      <div className="mb-5 h-3 overflow-hidden rounded-full bg-white/[.06]"><div className="fill-x h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300" style={{ width: `${st.pct}%` }} /></div>
+      <div className="mb-5 h-3 overflow-hidden rounded-full bg-white/[.06]"><div className="fill-x h-full rounded-full" style={{ width: `${st.pct}%`, background: `linear-gradient(90deg, ${lookOf(debt.kind).color}, color-mix(in srgb, ${lookOf(debt.kind).color} 45%, white))` }} /></div>
       {st.done && <p className="mb-4 flex items-center gap-2 rounded-2xl bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-500/20"><Trophy size={17} /> Dívida quitada! Parabéns.</p>}
       <Card title="Parcelas">
         <ul className="stagger space-y-2.5">

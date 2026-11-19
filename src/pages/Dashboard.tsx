@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { HandCoins, ChevronRight } from 'lucide-react';
+import { HandCoins, ChevronRight, PiggyBank as PiggyBankIcon } from 'lucide-react';
+import { usePrefs } from '../data/usePrefs';
 import { debtsSummary, openInstallmentsUntil } from '../lib/debts';
 import { useCloud } from '../cloud/CloudProvider';
 import { firstName } from '../cloud/profile';
@@ -51,6 +52,9 @@ export default function Dashboard() {
   }, [data.transactions.length, backupTick]);
   const hour = new Date().getHours();
   const name = firstName(useCloud().profile);
+  const { driver: driverMode } = usePrefs();
+  const debtSum = debtsSummary(data.debts, localISODate());
+  const goalsSaved = data.goals.filter((g) => g.type === 'financial').reduce((t, g) => t + g.currentAmount, 0);
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
   const today = (() => { const s = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }); return s.charAt(0).toUpperCase() + s.slice(1); })();
   const spentPct = totals.income > 0 ? Math.min(100, (totals.expense / totals.income) * 100) : totals.expense > 0 ? 100 : 0;
@@ -115,7 +119,11 @@ export default function Dashboard() {
         <Stat label="Entradas" money={totals.income} tone="good" icon={<ArrowUpCircle />} sub={`fixas ${formatBRL(totals.fixIncome)}`} />
         <Stat label="Saídas" money={totals.expense} tone="bad" icon={<ArrowDownCircle />} sub={`fixas ${formatBRL(totals.fixExpense)}`} />
         <Stat label="Contas a pagar" money={unpaid.total} tone="warn" icon={<CalendarClock />} sub={`${unpaid.count} ${unpaid.count === 1 ? 'conta pendente' : 'contas pendentes'}`} />
-        <Stat label="Lucro motorista" money={driver.netProfit} tone={driver.netProfit >= 0 ? 'info' : 'bad'} icon={<Car />} sub={`${formatBRL(driver.gross)} bruto · ${driver.daysWorked} ${driver.daysWorked === 1 ? 'dia' : 'dias'}`} />
+        {driverMode
+          ? <Stat label="Lucro motorista" money={driver.netProfit} tone={driver.netProfit >= 0 ? 'info' : 'bad'} icon={<Car />} sub={`${formatBRL(driver.gross)} bruto · ${driver.daysWorked} ${driver.daysWorked === 1 ? 'dia' : 'dias'}`} />
+          : debtSum.remaining > 0
+            ? <Stat label="Falta quitar" money={debtSum.remaining} tone="bad" icon={<HandCoins />} sub={`dívidas · ${Math.round(debtSum.pct)}% quitado`} />
+            : <Stat label="Guardado em metas" money={goalsSaved} tone="info" icon={<PiggyBankIcon />} sub={`${data.goals.length} ${data.goals.length === 1 ? 'meta' : 'metas'}`} />}
       </div>
 
       {isCurrent && <DebtStrip />}

@@ -196,11 +196,11 @@ export function NumberInput({ value, onChange, suffix, step, className, placehol
   );
 }
 
-export function Segmented<T extends string>({ value, onChange, options, className }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: ReactNode }>; className?: string }) {
+export function Segmented<T extends string>({ value, onChange, options, className, indicator }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: ReactNode }>; className?: string; /** Classes do fundo da opção escolhida (padrão: verde da marca). */ indicator?: string }) {
   const i = Math.max(0, options.findIndex((o) => o.value === value));
   return (
     <div className={cx('relative grid auto-cols-fr grid-flow-col rounded-2xl bg-[#08070f] p-1 ring-1 ring-inset ring-white/[.07]', className)}>
-      <span aria-hidden="true" className="absolute bottom-1 left-1 top-1 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-[0_6px_20px_-6px] shadow-brand-500 transition-transform duration-500 ease-[var(--ease-spring)]"
+      <span aria-hidden="true" className={cx('absolute bottom-1 left-1 top-1 rounded-xl bg-gradient-to-br shadow-[0_6px_20px_-6px] transition-all duration-500 ease-[var(--ease-spring)]', indicator ?? 'from-brand-500 to-brand-700 shadow-brand-500')}
         style={{ width: `calc((100% - .5rem) / ${options.length})`, transform: `translateX(${i * 100}%)` }} />
       {options.map((o) => (
         <button key={o.value} type="button" onClick={() => onChange(o.value)} className={cx('relative z-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] transition-colors duration-300', value === o.value ? 'text-white' : 'text-slate-500 hover:text-slate-200')}>

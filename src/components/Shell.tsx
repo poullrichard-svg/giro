@@ -9,6 +9,7 @@ import TransactionForm, { type TxPreset } from './TransactionForm';
 import { cx } from './ui';
 import { SyncBox, SyncDot } from '../cloud/SyncBadge';
 import { useCloud } from '../cloud/CloudProvider';
+import { mobileSlot, SHORT_LABEL, usePrefs } from '../data/usePrefs';
 
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const Transactions = lazy(() => import('../pages/Transactions'));
@@ -37,7 +38,6 @@ const NAV: Array<{ id: Route; label: string; icon: typeof Wallet }> = [
   { id: 'compras', label: 'Lista de compras', icon: ShoppingCart },
   { id: 'assistente', label: 'Assistente IA', icon: Sparkles },
 ];
-const MOBILE: Route[] = ['inicio', 'lancamentos', 'motorista', 'mais'];
 
 const QuickAddCtx = createContext<(p?: TxPreset) => void>(() => {});
 export const useQuickAdd = () => useContext(QuickAddCtx);
@@ -46,7 +46,10 @@ export default function Shell() {
   const { route, param } = useRoute();
   const { loading } = useData();
   const { isAdmin } = useCloud();
-  const sideNav = [...NAV, ...(isAdmin ? [{ id: 'admin' as Route, label: 'Painel admin', icon: BarChart3 }] : []), { id: 'mais' as Route, label: 'Ajustes', icon: Menu }];
+  const { driver, visible } = usePrefs();
+  const slot = mobileSlot(driver, visible) as Route;
+  const MOBILE: Route[] = ['inicio', 'lancamentos', slot, 'mais'];
+  const sideNav = [...NAV.filter((n) => visible(n.id)), ...(isAdmin ? [{ id: 'admin' as Route, label: 'Painel admin', icon: BarChart3 }] : []), { id: 'mais' as Route, label: 'Ajustes', icon: Menu }];
   const [txOpen, setTxOpen] = useState(false);
   const [preset, setPreset] = useState<TxPreset | undefined>();
   const openTx = (p?: TxPreset) => { setPreset(p); setTxOpen(true); };
@@ -114,7 +117,7 @@ export default function Shell() {
         {/* Celular: barra flutuante com o + no centro */}
         <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-[var(--color-ink)] via-[var(--color-ink)]/90 to-transparent px-3 pb-3 pt-8 md:hidden">
           <div className="surface relative grid grid-cols-5 items-center rounded-[2rem] px-1.5 py-2 shadow-[0_20px_50px_-10px_rgba(0,0,0,.9)]">
-            {(['inicio', 'lancamentos', 'novo', 'motorista', 'mais'] as const).map((id) => {
+            {(['inicio', 'lancamentos', 'novo', slot, 'mais'] as const).map((id) => {
               if (id === 'novo') {
                 return (
                   <div key={id} className="flex justify-center">
@@ -131,7 +134,7 @@ export default function Shell() {
                   <span className={cx('flex h-9 w-12 items-center justify-center rounded-2xl transition-all duration-500 ease-[var(--ease-spring)]', active ? 'solid scale-110' : '')} style={active ? ({ '--tone': '#16a34a' } as React.CSSProperties) : undefined}>
                     <n.icon size={19} strokeWidth={2.3} />
                   </span>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider">{n.label === 'Lançamentos' ? 'Extrato' : n.label}</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider">{SHORT_LABEL[n.id] ?? n.label}</span>
                 </button>
               );
             })}

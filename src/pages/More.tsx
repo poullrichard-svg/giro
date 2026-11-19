@@ -11,6 +11,8 @@ import { ImportStatement } from '../components/ImportStatement';
 import { AISettings } from '../components/AISettings';
 import { AccountCard } from '../cloud/AccountCard';
 import { useCloud } from '../cloud/CloudProvider';
+import { mobileSlot, usePrefs } from '../data/usePrefs';
+import { AppTabsCard } from '../components/AppTabsCard';
 import { daysUntil, formatDate, localISODate } from '../lib/format';
 
 const readLastBackup = () => { try { return localStorage.getItem(BACKUP_KEY); } catch { return null; } };
@@ -18,6 +20,8 @@ const readLastBackup = () => { try { return localStorage.getItem(BACKUP_KEY); } 
 export default function More({ section }: { section?: string }) {
   const { data, persisted, engine, replaceAll } = useData();
   const synced = !!useCloud().user;
+  const { driver, visible } = usePrefs();
+  const slot = mobileSlot(driver, visible);
   const toast = useToast();
   const [lastBackup, setLastBackup] = useState(readLastBackup);
   const [confirmErase, setConfirmErase] = useState(false);
@@ -25,7 +29,7 @@ export default function More({ section }: { section?: string }) {
   const [importOpen, setImportOpen] = useState(false);
 
   // Registros do usuário (contas e configurações não contam: a "Carteira" é criada sozinha).
-  const total = Object.entries(data).filter(([k]) => k !== 'accounts' && k !== 'settings').reduce((s, [, arr]) => s + arr.length, 0);
+  const total = Object.entries(data).filter(([k]) => !['accounts', 'settings', 'prefs'].includes(k)).reduce((s, [, arr]) => s + arr.length, 0);
   const backupAge = lastBackup ? -daysUntil(lastBackup.slice(0, 10)) : null;
 
   const exportBackup = () => { downloadBackup(data); setLastBackup(readLastBackup()); toast('Backup baixado'); };
@@ -47,13 +51,14 @@ export default function More({ section }: { section?: string }) {
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-white">Mais</h1>
       <div className="grid grid-cols-2 gap-2 md:hidden">
-        {NAV.filter((n) => !['inicio', 'lancamentos', 'motorista'].includes(n.id)).map((n) => (
+        {NAV.filter((n) => !['inicio', 'lancamentos', slot].includes(n.id) && visible(n.id)).map((n) => (
           <a key={n.id} href={`#/${n.id}`} className="surface surface-hover press flex items-center gap-3 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-100"><n.icon size={20} className="text-brand-400" />{n.label}</a>
         ))}
       </div>
 
       <AccountCard focus={section === 'conta'} />
-      <AISettings focus={section === 'ia'} />
+      <AppTabsCard focus={section === 'abas'} />
+      {visible('assistente') && <AISettings focus={section === 'ia'} />}
       <Card title={<span className="flex items-center gap-2"><HardDrive size={16} /> Onde ficam seus dados</span>}>
         <p className="text-sm text-slate-400">{synced
           ? <>Tudo fica salvo <strong className="text-slate-200">neste aparelho e na sua conta</strong>. Funciona sem internet e sincroniza quando a conexão volta. São {total} registros.</>

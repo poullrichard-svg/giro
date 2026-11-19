@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Camera, Copy, CreditCard, ImagePlus, Landmark, Sparkles, Wallet, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Camera, Copy, CreditCard, ImagePlus, Landmark, Sparkles, Wallet, X } from 'lucide-react';
 import { compressImage, type CompressedImage } from '../lib/image';
 import type { Transaction, TxType } from '../types';
 import { useData } from '../data/DataProvider';
@@ -139,7 +139,7 @@ export default function TransactionForm({ open, onClose, preset, onDuplicate }: 
       footer={
         <div className={cx('grid gap-2.5', editing && 'grid-cols-[auto_1fr]')}>
           {editing && <Button variant="soft" onClick={() => { const t = editing; onClose(); setTimeout(() => onDuplicate?.(t), 50); }}><Copy size={15} /> Duplicar</Button>}
-          <Button className="w-full" disabled={busy || photoBusy} onClick={save}>{busy ? 'Salvando…' : 'Salvar'}</Button>
+          <Button className={cx('w-full', f.type === 'expense' && '!from-rose-500 !via-rose-600 !to-rose-700 !shadow-rose-500/70')} disabled={busy || photoBusy} onClick={save}>{busy ? 'Salvando…' : f.type === 'expense' ? 'Salvar despesa' : 'Salvar receita'}</Button>
         </div>}>
       <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
         {!editing && !duplicateOf && (
@@ -151,10 +151,11 @@ export default function TransactionForm({ open, onClose, preset, onDuplicate }: 
           </Field>
         )}
         <Segmented value={f.type} onChange={(t) => setF((x) => ({ ...x, type: t, category: t === 'expense' ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0], source: t === 'income' && x.source.startsWith('card:') ? defaultSource : x.source }))}
-          options={[{ value: 'expense', label: 'Despesa' }, { value: 'income', label: 'Receita' }]} />
+          indicator={f.type === 'expense' ? 'from-rose-500 to-rose-700 shadow-rose-500' : 'from-emerald-500 to-emerald-700 shadow-emerald-500'}
+          options={[{ value: 'expense', label: <span className="flex items-center justify-center gap-1.5"><ArrowDown size={14} strokeWidth={3} /> Despesa</span> }, { value: 'income', label: <span className="flex items-center justify-center gap-1.5"><ArrowUp size={14} strokeWidth={3} /> Receita</span> }]} />
         <Field label={card && f.installments > 1 && !editing ? 'Valor total da compra' : 'Valor'} error={errors.amount}
           hint={card && f.installments > 1 && !editing && f.amount > 0 ? `${f.installments}x de ${formatBRL(f.amount / f.installments)}` : undefined}>
-          <MoneyInput value={f.amount} onChange={(v) => set('amount', v)} className="text-lg font-semibold" />
+          <MoneyInput value={f.amount} onChange={(v) => set('amount', v)} className={cx('text-lg font-semibold', f.type === 'expense' ? '!text-rose-300 focus:!border-rose-400/70 focus:!ring-rose-500/15' : '!text-emerald-300 focus:!border-emerald-400/70 focus:!ring-emerald-500/15')} />
         </Field>
         <Field label="Descrição" error={errors.description}><Input value={f.description} onChange={(e) => set('description', e.target.value)} placeholder="Ex.: Mercado do mês" maxLength={120} /></Field>
         <Field label={f.type === 'income' ? 'Entrou em' : 'Pagou com'} group error={errors.source}>
