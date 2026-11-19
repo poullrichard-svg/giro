@@ -115,3 +115,6 @@ $$;
 
 revoke execute on function public.delete_account() from public, anon;
 grant execute on function public.delete_account() to authenticated;
+
+-- Faz a API do Supabase reconhecer na hora a tabela e as funções novas.
+notify pgrst, 'reload schema';
