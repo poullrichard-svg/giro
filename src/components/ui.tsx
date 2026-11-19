@@ -104,7 +104,7 @@ export function Card({ children, className, title, action, hover }: { children: 
 type BtnVariant = 'primary' | 'ghost' | 'danger' | 'soft';
 export function Button({ variant = 'primary', className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant }) {
   const v = {
-    primary: 'btn-shine bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 text-white shadow-[0_10px_30px_-10px] shadow-brand-500/70 hover:shadow-brand-500 hover:brightness-110',
+    primary: 'keep-dark btn-shine bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 text-white shadow-[0_10px_30px_-10px] shadow-brand-500/70 hover:shadow-brand-500 hover:brightness-110',
     soft: 'bg-white/[.05] text-slate-100 ring-1 ring-inset ring-white/10 hover:bg-white/10',
     ghost: 'text-slate-400 hover:bg-white/5 hover:text-white',
     danger: 'bg-rose-500/10 text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20',
@@ -135,7 +135,7 @@ export function Field({ label, children, hint, className, group, error }: { labe
     : <label className={cls}>{inner}</label>;
 }
 
-const inputCls = 'w-full min-h-12 rounded-2xl border border-white/[.07] bg-[#08070f] px-4 text-base md:text-sm font-semibold text-white outline-none transition duration-300 placeholder:font-medium placeholder:text-slate-600 hover:border-white/15 focus:border-brand-400/70 focus:ring-4 focus:ring-brand-500/15';
+const inputCls = 'w-full min-h-12 rounded-2xl border border-white/[.07] bg-[var(--field)] px-4 text-base md:text-sm font-semibold text-white outline-none transition duration-300 placeholder:font-medium placeholder:text-slate-600 hover:border-white/15 focus:border-brand-400/70 focus:ring-4 focus:ring-brand-500/15';
 
 export function Input(p: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...p} className={merge(inputCls, p.className)} />;
@@ -199,7 +199,7 @@ export function NumberInput({ value, onChange, suffix, step, className, placehol
 export function Segmented<T extends string>({ value, onChange, options, className, indicator }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: ReactNode }>; className?: string; /** Classes do fundo da opção escolhida (padrão: verde da marca). */ indicator?: string }) {
   const i = Math.max(0, options.findIndex((o) => o.value === value));
   return (
-    <div className={cx('relative grid auto-cols-fr grid-flow-col rounded-2xl bg-[#08070f] p-1 ring-1 ring-inset ring-white/[.07]', className)}>
+    <div className={cx('relative grid auto-cols-fr grid-flow-col rounded-2xl bg-[var(--field)] p-1 ring-1 ring-inset ring-white/[.07]', className)}>
       <span aria-hidden="true" className={cx('absolute bottom-1 left-1 top-1 rounded-xl bg-gradient-to-br shadow-[0_6px_20px_-6px] transition-all duration-500 ease-[var(--ease-spring)]', indicator ?? 'from-brand-500 to-brand-700 shadow-brand-500')}
         style={{ width: `calc((100% - .5rem) / ${options.length})`, transform: `translateX(${i * 100}%)` }} />
       {options.map((o) => (
@@ -311,7 +311,7 @@ export function AddCard({ label, onClick, className }: { label: string; onClick:
 export function Check({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
   return (
     <button type="button" role="checkbox" aria-checked={checked} aria-label={label} onClick={onChange}
-      className={cx('press flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ring-1 ring-inset transition-colors duration-300', checked ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 ring-emerald-300/40 shadow-[0_6px_16px_-6px] shadow-emerald-500' : 'bg-[#08070f] ring-white/15 hover:ring-white/30')}>
+      className={cx('press flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ring-1 ring-inset transition-colors duration-300', checked ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 ring-emerald-300/40 shadow-[0_6px_16px_-6px] shadow-emerald-500' : 'bg-[var(--field)] ring-white/15 hover:ring-white/30')}>
       {checked && <CheckIcon size={17} strokeWidth={3.5} className="pop-in text-white" />}
     </button>
   );

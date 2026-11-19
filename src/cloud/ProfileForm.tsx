@@ -39,7 +39,7 @@ function AvatarPicker({ value, onChange, name }: { value: string | null; onChang
     <div className="flex items-center gap-4">
       <button type="button" onClick={() => ref.current?.click()} aria-label="Escolher foto" className="press relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-brand-500/15 ring-2 ring-brand-400/40">
         {value ? <img src={value} alt="Sua foto" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center font-display text-2xl font-black text-brand-300">{initials || <UserRound size={30} />}</span>}
-        <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-white ring-2 ring-[#0d0b17]"><Camera size={14} /></span>
+        <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-white ring-2 ring-[var(--color-panel)]"><Camera size={14} /></span>
       </button>
       <div className="text-sm">
         <p className="font-bold text-white">Foto (opcional)</p>

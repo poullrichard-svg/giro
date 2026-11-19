@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { Car, LayoutGrid } from 'lucide-react';
+import { Car, LayoutGrid, Moon, Sun } from 'lucide-react';
 import { NAV } from './Shell';
-import { Card, cx } from './ui';
+import { Card, Segmented, cx } from './ui';
+import { useThemePref } from '../lib/theme';
 import { OPTIONAL_TABS } from '../lib/prefs';
 import { usePrefs } from '../data/usePrefs';
 import { useToast } from '../data/toast';
@@ -17,7 +18,7 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}
       className={cx('press relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300', on ? 'bg-brand-500 shadow-[0_0_14px_-2px] shadow-brand-500' : 'bg-white/10 ring-1 ring-inset ring-white/10')}>
-      <span className={cx('absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ease-[var(--ease-spring)]', on ? 'left-6' : 'left-1')} />
+      <span className={cx('keep-dark absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ease-[var(--ease-spring)]', on ? 'left-6' : 'left-1')} />
     </button>
   );
 }
@@ -26,11 +27,15 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 export function AppTabsCard({ focus }: { focus?: boolean }) {
   const { driver, visible, setDriver, setTab, homeInvest, setHomeInvest } = usePrefs();
   const toast = useToast();
+  const [theme, setTheme] = useThemePref();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { if (focus) setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300); }, [focus]);
   return (
     <div ref={ref} id="abas" className="scroll-mt-6">
       <Card title={<span className="flex items-center gap-2"><LayoutGrid size={16} className="text-brand-400" /> Personalizar o app</span>}>
+        <p className="label mb-2 text-slate-500">Aparência</p>
+        <Segmented className="mb-1" value={theme} onChange={setTheme} options={[{ value: 'dark', label: <span className="flex items-center justify-center gap-1.5"><Moon size={13} /> Escuro</span> }, { value: 'light', label: <span className="flex items-center justify-center gap-1.5"><Sun size={13} /> Claro</span> }, { value: 'system', label: 'Automático' }]} />
+        <p className="mb-5 text-[11px] text-slate-500">Automático segue o modo claro/escuro do celular. Vale para este aparelho.</p>
         <div className={cx('flex items-center gap-4 rounded-[1.4rem] p-4 ring-1 transition-colors', driver ? 'bg-sky-500/10 ring-sky-500/25' : 'bg-white/[.03] ring-white/[.06]')}>
           <span className={cx('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl', driver ? 'solid' : 'bg-white/[.05] text-slate-400')} style={driver ? ({ '--tone': '#0ea5e9' } as React.CSSProperties) : undefined}><Car size={20} /></span>
           <div className="min-w-0 flex-1">

@@ -41,8 +41,8 @@ function AssetRow({ a, rank }: { a: Asset; rank?: number }) {
     <li className="surface flex min-w-0 items-center gap-3 rounded-[1.3rem] p-3" data-ticker={a.ticker}>
       <button type="button" onClick={() => sheet.open(a)} aria-label={`Ver ficha de ${a.ticker}`} className="press flex min-w-0 flex-1 items-center gap-3 text-left">
       {rank != null && <span className="w-4 shrink-0 text-center font-display text-sm font-black text-slate-500">{rank}</span>}
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[10px] font-black text-white" style={{ background: `color-mix(in srgb, ${color} 30%, #0b0915)`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 45%, transparent)` }}>
-        {a.logo && !logoFailed ? <img src={a.logo} alt="" className="h-full w-full bg-white object-contain p-1" loading="lazy" onError={() => setLogoFailed(true)} /> : a.ticker.slice(0, 4)}
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[10px] font-black text-white" style={{ background: `color-mix(in srgb, ${color} 30%, var(--color-panel))`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 45%, transparent)` }}>
+        {a.logo && !logoFailed ? <img src={a.logo} alt="" className="keep-dark h-full w-full bg-white object-contain p-1" loading="lazy" onError={() => setLogoFailed(true)} /> : a.ticker.slice(0, 4)}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate font-display font-black text-white">{a.ticker}</p>
@@ -155,7 +155,7 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
       <div role="tablist" aria-label="Seções" className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
         {TABS.map((t) => (
           <button key={t.value} type="button" role="tab" aria-selected={tab === t.value} onClick={() => go('investimentos', t.value)}
-            className={cx('press shrink-0 rounded-2xl px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] ring-1 transition', tab === t.value ? 'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-[0_6px_20px_-6px] shadow-brand-500 ring-brand-400/40' : 'bg-[#08070f] text-slate-400 ring-white/[.07] hover:text-white')}>
+            className={cx('press shrink-0 rounded-2xl px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] ring-1 transition', tab === t.value ? 'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-[0_6px_20px_-6px] shadow-brand-500 ring-brand-400/40' : 'bg-[var(--field)] text-slate-400 ring-white/[.07] hover:text-white')}>
             {t.label}
           </button>
         ))}

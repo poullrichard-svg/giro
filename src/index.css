@@ -17,6 +17,9 @@
   --ease-out-expo: cubic-bezier(.16, 1, .3, 1);
 }
 
+/* Cores que o tema claro troca (o escuro é o padrão). */
+:root { --field: #08070f; --sidebar: rgba(7, 6, 14, .8); --topbar: rgba(5, 4, 11, .75); color-scheme: dark; }
+
 @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
 
 @layer base {
@@ -38,7 +41,7 @@ input[type="date"]::-webkit-calendar-picker-indicator, input[type="month"]::-web
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-select option { background: #13111f; }
+select option { background: var(--color-panel-2); color: var(--color-white); }
 
 }
 
@@ -171,3 +174,67 @@ select option { background: #13111f; }
 @supports (-webkit-touch-callout: none) {
   input, select, textarea { font-size: max(16px, 1em) !important; }
 }
+
+/* =============================================================================
+   Tema claro. Troca as cores neutras e os tons de texto; cartões coloridos
+   (.tinted, .solid), botões principais e avisos (.keep-dark) continuam vivos,
+   com texto branco — por isso lá dentro as cores voltam às do tema escuro.
+   ============================================================================= */
+/* Painel branco dentro de um cartão colorido volta às cores do tema claro. */
+:root[data-theme="light"],
+:root[data-theme="light"] :is(.keep-dark, .tinted, .solid) .surface {
+  color-scheme: light;
+  --color-ink: #f2f4f8; --color-panel: #ffffff; --color-panel-2: #f8fafc;
+  --field: #eef1f6; --sidebar: rgba(255, 255, 255, .88); --topbar: rgba(242, 244, 248, .82);
+  --color-white: #0f172a; --color-black: #0f172a;
+  --color-slate-100: #0f172a; --color-slate-200: #1e293b; --color-slate-300: #334155; --color-slate-400: #475569; --color-slate-500: #64748b; --color-slate-600: #94a3b8;
+  --color-emerald-100: #064e3b; --color-emerald-200: #065f46; --color-emerald-300: #047857; --color-emerald-400: #059669;
+  --color-rose-50: #881337; --color-rose-100: #881337; --color-rose-200: #9f1239; --color-rose-300: #be123c; --color-rose-400: #e11d48;
+  --color-amber-100: #78350f; --color-amber-200: #92400e; --color-amber-300: #b45309; --color-amber-400: #d97706;
+  --color-sky-100: #0c4a6e; --color-sky-200: #075985; --color-sky-300: #0369a1; --color-sky-400: #0284c7;
+  --color-brand-300: #15803d; --color-brand-400: #16a34a;
+  --color-violet-300: #6d28d9; --color-orange-300: #c2410c; --color-fuchsia-400: #c026d3; --color-cyan-400: #0891b2;
+}
+:root[data-theme="light"] :is(.keep-dark, .tinted, .solid) {
+  --color-white: #ffffff; --color-black: #000000;
+  /* fundo colorido vivo: cinzas mais claros para continuar legíveis */
+  --color-slate-100: #f8fafc; --color-slate-200: #f1f5f9; --color-slate-300: #e2e8f0; --color-slate-400: #e2e8f0; --color-slate-500: #dbe3ee; --color-slate-600: #cbd5e1;
+  --color-emerald-100: #d1fae5; --color-emerald-200: #a7f3d0; --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399;
+  --color-rose-50: #fff1f2; --color-rose-100: #ffe4e6; --color-rose-200: #fecdd3; --color-rose-300: #fda4af; --color-rose-400: #fb7185;
+  --color-amber-100: #fef3c7; --color-amber-200: #fde68a; --color-amber-300: #fcd34d; --color-amber-400: #fbbf24;
+  --color-sky-100: #e0f2fe; --color-sky-200: #bae6fd; --color-sky-300: #7dd3fc; --color-sky-400: #38bdf8;
+  --color-brand-300: #86efac; --color-brand-400: #4ade80;
+  --color-violet-300: #c4b5fd; --color-orange-300: #fdba74; --color-fuchsia-400: #e879f9; --color-cyan-400: #22d3ee;
+  color: #ffffff;
+}
+:root[data-theme="light"] body,
+:root[data-theme="light"] :is(.keep-dark, .tinted, .solid) .surface { color: #1e293b; }
+:root[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme="light"] input[type="month"]::-webkit-calendar-picker-indicator,
+:root[data-theme="light"] input[type="time"]::-webkit-calendar-picker-indicator { filter: none; }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+:root[data-theme="light"] .backdrop {
+  background:
+    radial-gradient(900px 520px at 12% -8%, rgba(34, 197, 94, .16), transparent 60%),
+    radial-gradient(700px 460px at 100% 10%, rgba(20, 184, 166, .10), transparent 60%),
+    radial-gradient(800px 600px at 50% 120%, rgba(245, 158, 11, .07), transparent 60%),
+    var(--color-ink);
+}
+:root[data-theme="light"] .backdrop::after { background-image: radial-gradient(rgba(15, 23, 42, .07) 1px, transparent 1px); }
+:root[data-theme="light"] .surface {
+  background: linear-gradient(180deg, #ffffff, #f9fafc);
+  border-color: rgba(15, 23, 42, .08);
+  box-shadow: inset 0 1px 0 #fff, 0 14px 32px -22px rgba(15, 23, 42, .35);
+}
+:root[data-theme="light"] .surface-hover:hover { border-color: rgba(15, 23, 42, .14); box-shadow: inset 0 1px 0 #fff, 0 22px 40px -22px rgba(15, 23, 42, .4); }
+:root[data-theme="light"] .tinted {
+  background:
+    radial-gradient(120% 120% at 100% 100%, color-mix(in srgb, var(--tone) 55%, #fff 0%) 0%, transparent 60%),
+    linear-gradient(160deg, color-mix(in srgb, var(--tone) 88%, #0b1020), color-mix(in srgb, var(--tone) 62%, #0b1020));
+  border-color: color-mix(in srgb, var(--tone) 50%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 18px 36px -20px color-mix(in srgb, var(--tone) 60%, transparent);
+}
+:root[data-theme="light"] .tinted .watermark { opacity: .16; }
+
+/* Texto na cor do próprio cartão (ex.: % da meta) some no fundo colorido do tema claro. */
+:root[data-theme="light"] .tinted .tone-text { color: #fff !important; }

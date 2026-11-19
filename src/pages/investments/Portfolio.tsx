@@ -96,7 +96,7 @@ function PositionRow({ p, total, onOpen }: { p: Position; total: number; onOpen:
   return (
     <li>
       <button type="button" onClick={onOpen} className="surface surface-hover press flex w-full min-w-0 items-center gap-3 rounded-[1.3rem] p-3 text-left" data-ticker={p.ticker}>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[10px] font-black text-white" style={{ background: `color-mix(in srgb, ${color} 30%, #0b0915)`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 45%, transparent)` }}>{isFixed(p.kind) ? 'RF' : p.ticker.slice(0, 4)}</span>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[10px] font-black text-white" style={{ background: `color-mix(in srgb, ${color} 30%, var(--color-panel))`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 45%, transparent)` }}>{isFixed(p.kind) ? 'RF' : p.ticker.slice(0, 4)}</span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-display font-black text-white">{p.ticker}</span>
           <span className="block truncate text-[11px] text-slate-500">{isFixed(p.kind) ? `${KIND_LABEL[p.kind]} · aplicado ${formatBRL(p.invested)}` : `${qtyText(p.quantity)} × PM ${formatBRL(p.avgPrice)}`} · {total > 0 ? formatNumber((p.value / total) * 100, 1) : 0}%</span>
@@ -278,7 +278,7 @@ function ImportModal({ open, assets, onClose }: { open: boolean; assets: Asset[]
         </label>
         <Field label="Ou cole aqui (copie da planilha)">
           <textarea value={text} onChange={(e) => { setText(e.target.value); setRes(e.target.value.trim() ? parsePortfolio(textToRows(e.target.value), assets) : null); }} rows={4}
-            className="w-full rounded-2xl border border-white/[.07] bg-[#08070f] p-3 font-mono text-base text-white outline-none md:text-xs" placeholder={'Ativo;Quantidade;Preço\nPETR4;100;35,20'} />
+            className="w-full rounded-2xl border border-white/[.07] bg-[var(--field)] p-3 font-mono text-base text-white outline-none md:text-xs" placeholder={'Ativo;Quantidade;Preço\nPETR4;100;35,20'} />
         </Field>
         {res && (
           <div className="space-y-2" data-testid="import-preview">

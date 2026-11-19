@@ -69,7 +69,7 @@ export default function Shell() {
       <div className="backdrop" aria-hidden="true" />
       <div className="min-h-dvh md:flex">
         {/* Computador: barra lateral */}
-        <aside className="sticky top-0 hidden h-dvh w-[17rem] shrink-0 flex-col border-r border-white/[.05] bg-[#07060e]/80 md:flex">
+        <aside className="sticky top-0 hidden h-dvh w-[17rem] shrink-0 flex-col border-r border-white/[.05] bg-[var(--sidebar)] md:flex">
           <a href="#/inicio" className="group flex items-center gap-3 px-6 pb-8 pt-7">
             <span className="transition-transform duration-700 ease-[var(--ease-spring)] group-hover:rotate-[360deg]"><Logo size={42} /></span>
             <div>
@@ -96,9 +96,9 @@ export default function Shell() {
 
         <div className="min-w-0 flex-1">
           {/* Computador: barra superior */}
-          <header className="sticky top-0 z-20 hidden items-center justify-between border-b border-white/[.05] bg-[#05040b]/75 px-8 py-4 backdrop-blur-md md:flex">
+          <header className="sticky top-0 z-20 hidden items-center justify-between border-b border-white/[.05] bg-[var(--topbar)] px-8 py-4 backdrop-blur-md md:flex">
             <p className="label flex items-center gap-2 text-slate-500">{current && <current.icon size={14} />} {current?.label ?? 'Início'}</p>
-            <button onClick={() => openTx()} className="press btn-shine pulse-ring flex items-center gap-2 rounded-2xl bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 px-5 py-3 text-[12px] font-extrabold uppercase tracking-[.08em] text-white shadow-[0_10px_30px_-10px] shadow-brand-500">
+            <button onClick={() => openTx()} className="keep-dark press btn-shine pulse-ring flex items-center gap-2 rounded-2xl bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 px-5 py-3 text-[12px] font-extrabold uppercase tracking-[.08em] text-white shadow-[0_10px_30px_-10px] shadow-brand-500">
               <Plus size={17} strokeWidth={3} /> Novo lançamento
             </button>
           </header>
@@ -123,7 +123,7 @@ export default function Shell() {
               if (id === 'novo') {
                 return (
                   <div key={id} className="flex justify-center">
-                    <button onClick={() => openTx()} aria-label="Novo lançamento" className="press pulse-ring -mt-10 flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-brand-500 via-brand-600 to-emerald-700 text-white shadow-[0_14px_30px_-8px] shadow-brand-500 ring-[5px] ring-[var(--color-ink)]">
+                    <button onClick={() => openTx()} aria-label="Novo lançamento" className="keep-dark press pulse-ring -mt-10 flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-brand-500 via-brand-600 to-emerald-700 text-white shadow-[0_14px_30px_-8px] shadow-brand-500 ring-[5px] ring-[var(--color-ink)]">
                       <Plus size={30} strokeWidth={3} />
                     </button>
                   </div>

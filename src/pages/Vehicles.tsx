@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { CareCard, FipeCard } from './vehicles/Care';
 import { ArrowLeft, Bike, CalendarClock, Car, CarFront, Droplets, FileText, Fuel, Gauge, Motorbike, Pencil, PiggyBank, Plus, Shield, Truck, Wrench } from 'lucide-react';
 import { VEHICLE_KINDS } from '../lib/work';
 import type { VehicleKind } from '../types';
@@ -21,7 +22,7 @@ export function Plate({ plate, small }: { plate: string; small?: boolean }) {
   const p = (plate || '———————').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const pretty = /^[A-Z]{3}\d{4}$/.test(p) ? `${p.slice(0, 3)}-${p.slice(3)}` : p.length === 7 ? `${p.slice(0, 3)}${p.slice(3)}` : p;
   return (
-    <div className={cx('inline-flex flex-col overflow-hidden rounded-md border-2 border-slate-800 bg-white text-center shadow', small ? 'w-24' : 'w-32')}>
+    <div className={cx('keep-dark inline-flex flex-col overflow-hidden rounded-md border-2 border-slate-800 bg-white text-center shadow', small ? 'w-24' : 'w-32')}>
       <div className={cx('flex items-center justify-between bg-blue-700 px-1.5 font-bold text-white', small ? 'text-[6px]' : 'text-[8px]')}><span>BR</span><span>BRASIL</span><span className="opacity-0">BR</span></div>
       <div className={cx('font-mono font-black tracking-wider text-slate-900', small ? 'py-0.5 text-sm' : 'py-1 text-lg')}>{pretty}</div>
     </div>
@@ -166,6 +167,7 @@ function VehicleDetail({ v, onEdit }: { v: Vehicle; onEdit: () => void }) {
         </Card>
       </div>
 
+      <div className="grid gap-x-4 lg:grid-cols-2"><CareCard v={v} onEdit={onEdit} /><FipeCard v={v} /></div>
       <ReserveCard v={v} expenses={expenses} />
 
       <Card className="mt-4" title={`Gastos em ${year} · ${formatBRL(yearTotal)}`} action={<Select className="h-9 min-h-9 w-24" value={year} onChange={(e) => setYear(e.target.value)} options={years} />}>
@@ -329,6 +331,10 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
       )}
       {tab === 'custos' && (
         <div className="space-y-4">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
+            <Field label="Preço de compra (opcional)" hint="Para calcular a desvalorização"><MoneyInput value={f.purchasePrice ?? 0} onChange={(v) => set('purchasePrice', v || null)} /></Field>
+            <Field label="Data da compra"><Input type="date" value={f.purchaseDate ?? ''} onChange={(e) => set('purchaseDate', e.target.value || null)} /></Field>
+          </div>
           <Segmented value={f.ownership} onChange={(v) => set('ownership', v)} options={[{ value: 'owned', label: 'Quitado' }, { value: 'financed', label: 'Financiado' }, { value: 'rented', label: 'Alugado' }]} />
           {f.ownership !== 'owned' && (
             <div className="grid grid-cols-2 gap-3">
@@ -356,14 +362,36 @@ function VehicleForm({ open, editing, onClose }: { open: boolean; editing?: Vehi
             <Field label="Troca de óleo a cada" error={errors.oilIntervalKm}><NumberInput value={f.oilIntervalKm} onChange={(v) => set('oilIntervalKm', Math.round(v))} suffix="km" /></Field>
             <Field label="Última troca (hodômetro)"><NumberInput value={f.lastOilChangeKm ?? 0} onChange={(v) => set('lastOilChangeKm', Math.round(v) || null)} suffix="km" /></Field>
           </div>
+          <div className="rounded-[1.4rem] bg-sky-500/[.05] p-4 ring-1 ring-sky-500/15">
+            <p className="label mb-1 text-sky-300">Pneus</p>
+            <p className="mb-3 text-xs text-slate-400">A medida está na lateral do pneu (ex.: 175/70 R14). Com a duração, o app avisa quando trocar.</p>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
+              <Field label="Medida"><Input value={f.tireSize ?? ''} maxLength={20} onChange={(e) => set('tireSize', e.target.value.toUpperCase() || null)} placeholder="175/70 R14" /></Field>
+              <Field label="Marca / modelo"><Input value={f.tireBrand ?? ''} maxLength={40} onChange={(e) => set('tireBrand', e.target.value || null)} placeholder="Pirelli Cinturato P1" /></Field>
+              <Field label="Colocados no km"><NumberInput value={f.tireInstalledKm ?? 0} onChange={(v) => set('tireInstalledKm', Math.round(v) || null)} suffix="km" /></Field>
+              <Field label="Em"><Input type="date" value={f.tireInstalledDate ?? ''} onChange={(e) => set('tireInstalledDate', e.target.value || null)} /></Field>
+              <Field label="Duram (km)" hint="Em geral 40 a 60 mil km"><NumberInput value={f.tireLifeKm ?? 0} onChange={(v) => set('tireLifeKm', Math.round(v) || null)} suffix="km" /></Field>
+              <Field label="Preço do jogo"><MoneyInput value={f.tireSetCost ?? 0} onChange={(v) => set('tireSetCost', v || null)} /></Field>
+            </div>
+          </div>
+          <div className="rounded-[1.4rem] bg-violet-500/[.05] p-4 ring-1 ring-violet-500/15">
+            <p className="label mb-1 text-violet-300">Filtros</p>
+            <p className="mb-3 text-xs text-slate-400">O filtro de óleo vai junto com a troca de óleo. Veja os intervalos no manual (ar: ~10 mil km; cabine: ~15 mil km).</p>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
+              <Field label="Filtro de ar a cada"><NumberInput value={f.airFilterIntervalKm ?? 0} onChange={(v) => set('airFilterIntervalKm', Math.round(v) || null)} suffix="km" /></Field>
+              <Field label="Última troca"><NumberInput value={f.airFilterLastKm ?? 0} onChange={(v) => set('airFilterLastKm', Math.round(v) || null)} suffix="km" /></Field>
+              <Field label="Filtro de combustível a cada"><NumberInput value={f.fuelFilterIntervalKm ?? 0} onChange={(v) => set('fuelFilterIntervalKm', Math.round(v) || null)} suffix="km" /></Field>
+              <Field label="Última troca"><NumberInput value={f.fuelFilterLastKm ?? 0} onChange={(v) => set('fuelFilterLastKm', Math.round(v) || null)} suffix="km" /></Field>
+              <Field label="Filtro de cabine a cada"><NumberInput value={f.cabinFilterIntervalKm ?? 0} onChange={(v) => set('cabinFilterIntervalKm', Math.round(v) || null)} suffix="km" /></Field>
+              <Field label="Última troca"><NumberInput value={f.cabinFilterLastKm ?? 0} onChange={(v) => set('cabinFilterLastKm', Math.round(v) || null)} suffix="km" /></Field>
+            </div>
+          </div>
           <div className="rounded-[1.4rem] bg-amber-500/[.05] p-4 ring-1 ring-amber-500/15">
             <p className="label mb-1 text-amber-300">Reserva de manutenção</p>
             <p className="mb-3 text-xs text-slate-400">Com esses custos, o app calcula quanto separar por km rodado para não ser pego de surpresa.</p>
             <div className="grid grid-cols-2 items-start gap-3">
               <Field label="Custo da troca de óleo"><MoneyInput value={f.oilChangeCost ?? 0} onChange={(v) => set('oilChangeCost', v || null)} /></Field>
               <span />
-              <Field label="Jogo de pneus"><MoneyInput value={f.tireSetCost ?? 0} onChange={(v) => set('tireSetCost', v || null)} /></Field>
-              <Field label="Pneus duram"><NumberInput value={f.tireLifeKm ?? 0} onChange={(v) => set('tireLifeKm', Math.round(v) || null)} suffix="km" /></Field>
               <Field label="Revisão / peças"><MoneyInput value={f.revisionCost ?? 0} onChange={(v) => set('revisionCost', v || null)} /></Field>
               <Field label="A cada"><NumberInput value={f.revisionIntervalKm ?? 0} onChange={(v) => set('revisionIntervalKm', Math.round(v) || null)} suffix="km" /></Field>
             </div>

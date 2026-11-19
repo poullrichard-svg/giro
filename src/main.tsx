@@ -2,6 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { applyTheme } from './lib/theme';
+
+applyTheme();
 
 // Depois de uma atualização, uma aba antiga pode pedir arquivos que não existem mais.
 // Nesse caso, recarrega uma vez para pegar a versão nova.

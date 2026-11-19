@@ -1,5 +1,6 @@
 import { useState, type FormEvent, useEffect } from 'react';
-import { ListChecks, Plus, ShoppingCart } from 'lucide-react';
+import { ClipboardCopy, ListChecks, Plus, Share2, ShoppingCart } from 'lucide-react';
+import { useToast } from '../data/toast';
 import { useData } from '../data/DataProvider';
 import { useQuickAdd } from '../components/Shell';
 import { BigTile, Button, Card, Check, ConfirmDelete, Empty, Input, MoneyInput, NumberInput, PageHeader, Row, Select } from '../components/ui';
@@ -9,6 +10,7 @@ import { formatBRL } from '../lib/format';
 export default function Shopping() {
   const { data, insert, update, remove } = useData();
   const quickAdd = useQuickAdd();
+  const toast = useToast();
   const [name, setName] = useState('');
   const [qty, setQty] = useState(1);
   const [unit, setUnit] = useState('UN');
@@ -29,6 +31,18 @@ export default function Shopping() {
   const total = items.reduce((s, i) => s + i.estimatedPrice * i.quantity, 0);
   const inCart = items.filter((i) => i.completed).reduce((s, i) => s + i.estimatedPrice * i.quantity, 0);
 
+  /** Lista em formato de checklist: no Notion vira "to-do" ao colar; no WhatsApp fica legível. */
+  const asChecklist = () => ['🛒 Lista de compras', '', ...items.map((i) => `- [${i.completed ? 'x' : ' '}] ${i.name}${i.quantity !== 1 || i.unit !== 'UN' ? ` — ${String(i.quantity).replace('.', ',')} ${i.unit.toLowerCase()}` : ''}${i.estimatedPrice ? ` (${formatBRL(i.estimatedPrice * i.quantity)})` : ''}`), '', `Total: ${formatBRL(total)}`].join('\n');
+  const copyNotion = async () => {
+    try { await navigator.clipboard.writeText(asChecklist()); toast('Lista copiada! No Notion, é só colar (Ctrl+V): cada item vira uma caixinha de marcar.'); }
+    catch { toast('Não deu para copiar neste navegador.', 'error'); }
+  };
+  const share = async () => {
+    const text = asChecklist().replace(/- \[x\] /g, '✅ ').replace(/- \[ \] /g, '⬜ ');
+    if (navigator.share) { try { await navigator.share({ title: 'Lista de compras', text }); } catch { /* cancelou */ } }
+    else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  };
+
   const finish = async () => {
     quickAdd({ text: `gastei ${inCart.toFixed(2).replace('.', ',')} mercado` });
     await Promise.all(items.filter((i) => i.completed).map((i) => remove('shopping', i.id)));
@@ -36,7 +50,11 @@ export default function Shopping() {
 
   return (
     <div>
-      <PageHeader eyebrow="Mercado" title="Lista de compras" subtitle="Marque o que já pegou e veja o total do carrinho" />
+      <PageHeader eyebrow="Mercado" title="Lista de compras" subtitle="Marque o que já pegou e veja o total do carrinho"
+        actions={items.length > 0 ? <>
+          <Button variant="soft" onClick={copyNotion}><ClipboardCopy size={15} /> Copiar para o Notion</Button>
+          <Button variant="soft" onClick={share}><Share2 size={15} /> Compartilhar</Button>
+        </> : undefined} />
       <div className="stagger mb-5 grid grid-cols-2 gap-3 md:gap-4">
         <BigTile label="Gasto planejado total" money={total} tone="good" icon={<ShoppingCart />} />
         <BigTile label="Itens na lista" value={`${items.length} ${items.length === 1 ? 'item' : 'itens'}`} tone="info" icon={<ListChecks />} sub={`${items.filter((i) => i.completed).length} no carrinho · ${formatBRL(inCart)}`} />

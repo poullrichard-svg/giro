@@ -12,7 +12,7 @@ export function Donut({ data, size = 176 }: { data: Array<{ label: string; value
     <div className="flex flex-col items-center gap-6 sm:flex-row">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox="0 0 100 100" className="-rotate-90" role="img" aria-label="Gastos por categoria">
-          <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth="12" /><circle cx="50" cy="50" r="31" fill="#0b0915" stroke="rgba(255,255,255,.06)" strokeWidth=".6" />
+          <circle cx="50" cy="50" r={r} fill="none" style={{ stroke: 'color-mix(in srgb, var(--color-white) 6%, transparent)' }} strokeWidth="12" /><circle cx="50" cy="50" r="31" fill="var(--color-panel)" style={{ stroke: 'color-mix(in srgb, var(--color-white) 8%, transparent)' }} strokeWidth=".6" />
           {data.map((d, i) => {
             const len = (d.value / total) * c;
             const el = (

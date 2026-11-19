@@ -134,6 +134,29 @@ export interface Vehicle {
   reserveStartDate?: string | null;
   notes?: string | null;
   active: boolean;
+  /** Pneus: medida (ex.: 175/70 R14), marca/modelo e quando foram colocados. Duração: tireLifeKm. */
+  tireSize?: string | null;
+  tireBrand?: string | null;
+  tireInstalledKm?: number | null;
+  tireInstalledDate?: string | null;
+  /** Filtros (o de óleo vai junto com a troca de óleo): intervalo e última troca, em km. */
+  airFilterIntervalKm?: number | null;
+  airFilterLastKm?: number | null;
+  fuelFilterIntervalKm?: number | null;
+  fuelFilterLastKm?: number | null;
+  cabinFilterIntervalKm?: number | null;
+  cabinFilterLastKm?: number | null;
+  /** Compra e tabela FIPE (para acompanhar a depreciação). */
+  purchasePrice?: number | null;
+  purchaseDate?: string | null;
+  fipe?: FipeRef | null;
+  fipeHistory?: Array<{ date: string; value: number; ref?: string | null }> | null;
+}
+
+export interface FipeRef {
+  type: 'carros' | 'motos' | 'caminhoes';
+  brandId: string; modelId: string; yearId: string;
+  code?: string | null; label: string; value: number; refMonth?: string | null; updatedAt: string;
 }
 
 export interface VehicleExpense {
@@ -159,6 +182,10 @@ export interface Goal {
   /** Ícone (nome da lista GOAL_ICONS) e cor escolhidos pelo usuário. */
   icon?: string | null;
   color?: string | null;
+  /** Descrição livre (o título é o campo description). */
+  notes?: string | null;
+  /** Link de referência (produto, anúncio, simulação…). */
+  link?: string | null;
 }
 
 /** Aporte (positivo) ou retirada (negativo) numa meta. */

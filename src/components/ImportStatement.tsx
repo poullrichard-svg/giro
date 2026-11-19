@@ -127,7 +127,7 @@ export function ImportStatement({ open, onClose }: { open: boolean; onClose: () 
                     </div>
                     {!l.blocked && (
                       <select value={l.category} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, category: e.target.value } : x)))}
-                        aria-label="Categoria" className="mt-1.5 max-w-full rounded-lg border border-white/10 bg-[#08070f] px-2 py-1 text-xs font-semibold text-slate-200">
+                        aria-label="Categoria" className="mt-1.5 max-w-full rounded-lg border border-white/10 bg-[var(--field)] px-2 py-1 text-xs font-semibold text-slate-200">
                         {(l.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((c) => <option key={c}>{c}</option>)}
                       </select>
                     )}

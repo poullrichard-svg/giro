@@ -13,6 +13,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
   <title>Giro</title>
+  <script>
+    // Aplica o tema antes de desenhar a tela (evita piscar no tema errado).
+    try { var t = localStorage.getItem('giro.theme'); if (t === 'system') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      if (t === 'light') { document.documentElement.dataset.theme = 'light'; document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f2f4f8'); } } catch (e) {}
+  </script>
 </head>
 <body>
   <div id="root"></div>

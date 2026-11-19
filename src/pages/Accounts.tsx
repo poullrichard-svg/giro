@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { BankPicker } from '../components/BankPicker';
 import { ArrowLeft, ArrowLeftRight, CreditCard, Landmark, Pencil, Plus, Receipt, Wallet } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
@@ -171,7 +172,8 @@ function AccountForm({ open, editing, onClose }: { open: boolean; editing?: Acco
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Editar conta' : 'Nova conta'} footer={<Button className="w-full" onClick={save}>Salvar</Button>}>
       <div className="space-y-4">
-        <Field label="Nome" error={errors.name}><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Ex.: Nubank, Itaú, Dinheiro" maxLength={40} autoFocus /></Field>
+        <Field label="Banco" group><BankPicker name={f.name} onPick={(name, color) => setF({ ...f, name, color })} onOther={() => { setF({ ...f, name: '' }); setTimeout(() => document.getElementById('account-name')?.focus(), 50); }} /></Field>
+        <Field label="Nome" error={errors.name} hint="Se escolheu um banco acima, pode mudar o nome (ex.: Nubank PJ)"><Input id="account-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Ex.: Nubank, Itaú, Dinheiro" maxLength={40} /></Field>
         <Field label="Tipo"><Select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Account['kind'] })} options={ACCOUNT_KINDS} /></Field>
         <Field label="Saldo inicial" hint="Quanto tinha na conta quando começou a usar o app">
           <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -219,7 +221,8 @@ function CardForm({ open, editing, onClose }: { open: boolean; editing?: Card; o
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Editar cartão' : 'Novo cartão'} footer={<Button className="w-full" onClick={save}>Salvar</Button>}>
       <div className="space-y-4">
-        <Field label="Nome" error={errors.name}><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Ex.: Nubank, Inter, C6" maxLength={30} autoFocus /></Field>
+        <Field label="Banco do cartão" group><BankPicker name={f.name} onPick={(name, color) => setF({ ...f, name, color })} onOther={() => { setF({ ...f, name: '' }); setTimeout(() => document.getElementById('card-name')?.focus(), 50); }} /></Field>
+        <Field label="Nome" error={errors.name}><Input id="card-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Ex.: Nubank, Inter, C6" maxLength={30} /></Field>
         <Field label="Limite" error={errors.limit}><MoneyInput value={f.limit} onChange={(v) => setF({ ...f, limit: v })} /></Field>
         <div className="grid grid-cols-2 items-start gap-3">
           <Field label="Dia do fechamento" error={errors.closingDay}><NumberInput value={f.closingDay} onChange={(v) => setF({ ...f, closingDay: Math.round(v) })} /></Field>
@@ -309,7 +312,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
       <div className="flex flex-wrap gap-2.5">
         {ACCOUNT_COLORS.map((c) => (
           <button key={c} type="button" aria-label={`Cor ${c}`} aria-pressed={value === c} onClick={() => onChange(c)}
-            className={cx('press h-9 w-9 rounded-full ring-offset-2 ring-offset-[#110e1d] transition', value === c ? 'scale-110 ring-2 ring-white' : 'ring-0')} style={{ background: c, boxShadow: `0 4px 14px -4px ${c}` }} />
+            className={cx('press h-9 w-9 rounded-full ring-offset-2 ring-offset-[var(--color-panel-2)] transition', value === c ? 'scale-110 ring-2 ring-white' : 'ring-0')} style={{ background: c, boxShadow: `0 4px 14px -4px ${c}` }} />
         ))}
       </div>
     </Field>

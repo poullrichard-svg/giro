@@ -112,7 +112,7 @@ export default function Assistant() {
       )}
 
       {error && <p role="alert" className="mb-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-300 ring-1 ring-rose-500/20">{error}</p>}
-      <form className="surface sticky bottom-28 z-10 mt-2 flex !bg-[#0d0b17]/95 backdrop-blur-md items-end gap-2 rounded-[1.6rem] p-2 md:bottom-4" onSubmit={(e) => { e.preventDefault(); send(draft); }}>
+      <form className="surface sticky bottom-28 z-10 mt-2 flex !bg-[var(--color-panel)] backdrop-blur-md items-end gap-2 rounded-[1.6rem] p-2 md:bottom-4" onSubmit={(e) => { e.preventDefault(); send(draft); }}>
         <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={1} maxLength={600} placeholder="Pergunte sobre seus gastos…"
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(draft); } }}
           className="max-h-32 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-3 py-2.5 text-base text-white outline-none placeholder:text-slate-500" aria-label="Sua pergunta" />

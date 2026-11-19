@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft, Baby, Car, Coins, Gift, GraduationCap, Heart, History, Home, Pencil, PiggyBank, Plane, Plus, Shield, Smartphone, Target, Trash2, Trophy, Wrench,
+  ArrowLeft, Baby, ExternalLink, Car, Coins, Gift, GraduationCap, Heart, History, Home, Pencil, PiggyBank, Plane, Plus, Shield, Smartphone, Target, Trash2, Trophy, Wrench,
 } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
@@ -68,7 +68,7 @@ function GoalList({ onNew, onContribute }: { onNew: () => void; onContribute: (g
                 </span>
               </button>
               <div className="pop-sm relative mt-5">
-                <div className="label mb-2 flex justify-between"><span className="text-slate-400">{fmt(g, g.currentAmount)} de {fmt(g, g.targetAmount)}</span><span style={{ color }}>{Math.round(plan.pct)}%</span></div>
+                <div className="label mb-2 flex justify-between"><span className="text-slate-400">{fmt(g, g.currentAmount)} de {fmt(g, g.targetAmount)}</span><span className="tone-text" style={{ color }}>{Math.round(plan.pct)}%</span></div>
                 <div className="h-3 overflow-hidden rounded-full bg-white/[.06]"><div className="fill-x h-full rounded-full" style={{ width: `${plan.pct}%`, background: `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 60%, white))`, boxShadow: `0 0 14px ${color}` }} /></div>
                 <p className="label mt-2 text-slate-500">
                   {plan.done ? 'Parabéns!' : plan.monthlyNeeded ? `Guarde ${fmt(g, plan.monthlyNeeded)}/mês até ${formatDate(g.deadline)}` : plan.pace > 0 ? `No ritmo atual: ${plan.projectedDate ? formatDate(plan.projectedDate) : '—'}` : g.deadline ? `Até ${formatDate(g.deadline)}` : 'Toque para ver o histórico'}
@@ -115,6 +115,12 @@ function GoalDetail({ goal, onEdit, onContribute }: { goal: Goal; onEdit: () => 
         </div>
       </div>
 
+      {(goal.notes || goal.link) && (
+        <div className="surface mb-5 rounded-[1.5rem] p-4" data-testid="goal-notes">
+          {goal.notes && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-300">{goal.notes}</p>}
+          {goal.link && <a href={goal.link} target="_blank" rel="noreferrer noopener" className={cx('inline-flex max-w-full items-center gap-1.5 truncate text-sm font-bold text-brand-300 underline underline-offset-2', goal.notes && 'mt-2')}><ExternalLink size={14} className="shrink-0" /> {goal.link.replace(/^https?:\/\//, '').slice(0, 60)}</a>}
+        </div>
+      )}
       <div className="stagger mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Box label="Guardado" value={fmt(goal, goal.currentAmount)} sub={`${Math.round(plan.pct)}% de ${fmt(goal, goal.targetAmount)}`} color={color} />
         <Box label="Falta" value={fmt(goal, plan.left)} />
@@ -161,10 +167,10 @@ function Box({ label, value, sub, color }: { label: string; value: string; sub?:
 function GoalForm({ open, editing, onClose }: { open: boolean; editing?: Goal; onClose: () => void }) {
   const { insert, update } = useData();
   const toast = useToast();
-  const blank = { description: '', type: 'financial' as GoalType, targetAmount: 0, currentAmount: 0, deadline: '', icon: 'target', color: GOAL_COLORS[0] };
+  const blank = { description: '', type: 'financial' as GoalType, targetAmount: 0, currentAmount: 0, deadline: '', icon: 'target', color: GOAL_COLORS[0], notes: '', link: '' };
   const [f, setF] = useState(blank);
-  const [errors, setErrors] = useState<Errors<'description' | 'targetAmount' | 'deadline' | 'currentAmount'>>({});
-  useEffect(() => { if (open) { setErrors({}); setF(editing ? { description: editing.description, type: editing.type, targetAmount: editing.targetAmount, currentAmount: editing.currentAmount, deadline: editing.deadline ?? '', icon: editing.icon ?? 'target', color: editing.color ?? GOAL_COLORS[0] } : blank); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open, editing]);
+  const [errors, setErrors] = useState<Errors<'description' | 'targetAmount' | 'deadline' | 'currentAmount' | 'link'>>({});
+  useEffect(() => { if (open) { setErrors({}); setF(editing ? { description: editing.description, type: editing.type, targetAmount: editing.targetAmount, currentAmount: editing.currentAmount, deadline: editing.deadline ?? '', icon: editing.icon ?? 'target', color: editing.color ?? GOAL_COLORS[0], notes: editing.notes ?? '', link: editing.link ?? '' } : blank); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open, editing]);
   useEffect(() => { setErrors({}); }, [f]);
 
   const save = async () => {
@@ -173,10 +179,12 @@ function GoalForm({ open, editing, onClose }: { open: boolean; editing?: Goal; o
       targetAmount: [f.type === 'financial' && rules.positive(f.targetAmount, 'Valor alvo')],
       currentAmount: [rules.nonNegative(f.currentAmount, 'Valor guardado')],
       deadline: [rules.optionalDate(f.deadline, 'Prazo'), !editing && f.deadline && f.deadline <= localISODate() && 'O prazo precisa ser uma data futura'],
+      link: [f.link.trim() && !/^(https?:\/\/)?[^\s.]+\.[^\s]{2,}$/i.test(f.link.trim()) && 'Link inválido (ex.: www.site.com.br/produto)'],
     });
     setErrors(e);
     if (hasErrors(e)) return;
-    const payload = { description: f.description.trim(), type: f.type, targetAmount: f.type === 'financial' ? f.targetAmount : 100, deadline: f.deadline || null, icon: f.icon, color: f.color };
+    const link = f.link.trim() ? (/^https?:\/\//i.test(f.link.trim()) ? f.link.trim() : `https://${f.link.trim()}`) : null;
+    const payload = { description: f.description.trim(), type: f.type, targetAmount: f.type === 'financial' ? f.targetAmount : 100, deadline: f.deadline || null, icon: f.icon, color: f.color, notes: f.notes.trim() || null, link };
     const ok = editing ? await update('goals', editing.id, payload) : !!(await insert('goals', { ...payload, currentAmount: f.currentAmount }));
     if (ok) { toast(editing ? 'Meta atualizada' : 'Meta criada'); onClose(); }
   };
@@ -185,7 +193,10 @@ function GoalForm({ open, editing, onClose }: { open: boolean; editing?: Goal; o
     <Modal open={open} onClose={onClose} title={editing ? 'Editar meta' : 'Nova meta'} footer={<Button className="w-full" onClick={save}>{editing ? 'Salvar' : 'Criar'}</Button>}>
       <div className="space-y-4">
         {!editing && <Segmented value={f.type} onChange={(t) => setF({ ...f, type: t })} options={[{ value: 'financial', label: 'Financeira (R$)' }, { value: 'activity', label: 'Atividade (%)' }]} />}
-        <Field label="Descrição" error={errors.description}><Input value={f.description} maxLength={60} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Ex.: Entrada do carro novo" autoFocus /></Field>
+        <Field label="Título" error={errors.description}><Input value={f.description} maxLength={60} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Ex.: Entrada do carro novo" autoFocus /></Field>
+        <Field label="Descrição (opcional)"><textarea value={f.notes} maxLength={500} rows={3} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="Detalhes, por que é importante, como vai juntar…"
+          className="w-full rounded-2xl border border-white/[.07] bg-[var(--field)] px-4 py-3 text-base font-medium text-white outline-none placeholder:text-slate-600 focus:border-brand-400/70 md:text-sm" /></Field>
+        <Field label="Link (opcional)" error={errors.link} hint="Anúncio, produto, simulação do banco…"><Input type="url" inputMode="url" value={f.link} maxLength={300} onChange={(e) => setF({ ...f, link: e.target.value })} placeholder="www.site.com.br/produto" /></Field>
         {f.type === 'financial' && (
           <div className="grid grid-cols-2 items-start gap-3">
             <Field label="Valor alvo" error={errors.targetAmount}><MoneyInput value={f.targetAmount} onChange={(v) => setF({ ...f, targetAmount: v })} /></Field>
@@ -206,7 +217,7 @@ function GoalForm({ open, editing, onClose }: { open: boolean; editing?: Goal; o
           <div className="grid grid-cols-8 gap-2">
             {GOAL_COLORS.map((c) => (
               <button key={c} type="button" aria-label={`Cor ${c}`} aria-pressed={f.color === c} onClick={() => setF({ ...f, color: c })}
-                className={cx('press aspect-square w-full max-w-9 justify-self-center rounded-full ring-offset-2 ring-offset-[#110e1d] transition', f.color === c ? 'scale-110 ring-2 ring-white' : '')} style={{ background: c, boxShadow: `0 4px 14px -4px ${c}` }} />
+                className={cx('press aspect-square w-full max-w-9 justify-self-center rounded-full ring-offset-2 ring-offset-[var(--color-panel-2)] transition', f.color === c ? 'scale-110 ring-2 ring-white' : '')} style={{ background: c, boxShadow: `0 4px 14px -4px ${c}` }} />
             ))}
           </div>
         </Field>

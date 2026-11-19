@@ -1,6 +1,7 @@
 import type { DriverSession, FixedBill, FixedPayment, Transaction, Vehicle, VehicleExpense } from '../types';
 import { addMonths, daysUntil, hhmmToHours, localISODate, round2 } from './format';
 import { isInternal, txMonth } from './cards';
+import { wearItems } from './vehicleCare';
 
 const sum = <T,>(arr: T[], f: (x: T) => number) => round2(arr.reduce((s, x) => s + (f(x) || 0), 0));
 
@@ -63,6 +64,10 @@ export function vehicleAlerts(vehicles: Vehicle[], today = localISODate()): Aler
       const d = daysUntil(date, today);
       if (d > 30) continue;
       out.push({ id: `${v.id}-${label}`, severity: d < 0 ? 'danger' : d <= 7 ? 'warn' : 'info', title: `${label} · ${v.name}`, detail: d < 0 ? `Vencido há ${-d} dias` : d === 0 ? 'Vence hoje' : `Vence em ${d} dias`, days: d, href: `#/veiculos/${v.id}` });
+    }
+    for (const w of wearItems(v)) {
+      if (w.key === 'oleo' || w.level === 'ok') continue;
+      out.push({ id: `${v.id}-${w.key}`, severity: w.level === 'trocar' ? 'danger' : 'warn', title: `${w.label} · ${v.name}`, detail: w.remaining <= 0 ? `Passou ${Math.abs(w.remaining).toLocaleString('pt-BR')} km` : `Faltam ${w.remaining.toLocaleString('pt-BR')} km`, href: `#/veiculos/${v.id}` });
     }
     const oil = oilStatus(v);
     if (oil && oil.remaining <= 1000) {
