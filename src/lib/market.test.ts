@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { breadth, fiiKindOf, normalizeAsset, search, topMovers } from './market';
+import { breadth, fiiKindOf, fundamentalFilter, normalizeAsset, search, topMovers } from './market';
 
 describe('mercado', () => {
   it('entende os dois formatos da brapi e classifica FIIs', () => {
@@ -26,5 +26,19 @@ describe('mercado', () => {
     expect(breadth(list)).toMatchObject({ up: 2, down: 2, total: 4 });
     expect(search(list, 'logíst').length).toBe(0);
     expect(search(list, 'mxrf').map((a) => a.ticker)).toEqual(['MXRF11']);
+  });
+});
+
+describe('filtro fundamentalista (critérios públicos do AUVP11)', () => {
+  it('tira varejo, proteína animal e aéreas; exige valor de mercado ≥ R$ 3 bi', () => {
+    const f = (o: any) => fundamentalFilter(normalizeAsset(o)!);
+    expect(f({ stock: 'MGLU3', market_cap: 9e9 })).toBe('setor-excluido');
+    expect(f({ stock: 'JBSS3', market_cap: 5e10 })).toBe('setor-excluido');
+    expect(f({ stock: 'AZUL4', market_cap: 4e9 })).toBe('setor-excluido');
+    expect(f({ stock: 'EMBR3', market_cap: 4e10 })).toBe('para-estudar');
+    expect(f({ stock: 'ITUB4', market_cap: 3e11 })).toBe('para-estudar');
+    expect(f({ stock: 'ABCD3', market_cap: 8e8 })).toBe('pequena');
+    expect(f({ stock: 'PETR4' })).toBe('sem-dados');
+    expect(f({ stock: 'AUVP11', type: 'fund' })).toBe('sem-dados');
   });
 });

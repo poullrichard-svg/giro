@@ -24,7 +24,7 @@ export const CATALOG: Record<string, CatalogItem> = {
   RADL3: { type: 'acao', segment: 'Farmácias' }, SUZB3: { type: 'acao', segment: 'Papel e celulose' }, RENT3: { type: 'acao', segment: 'Aluguel de carros' },
   ELET3: { type: 'acao', segment: 'Energia' }, EGIE3: { type: 'acao', segment: 'Energia' }, TAEE11: { type: 'acao', segment: 'Energia' },
   CMIG4: { type: 'acao', segment: 'Energia' }, SBSP3: { type: 'acao', segment: 'Saneamento' }, VIVT3: { type: 'acao', segment: 'Telecom' },
-  EMBR3: { type: 'acao', segment: 'Aviação' }, GGBR4: { type: 'acao', segment: 'Siderurgia' }, JBSS3: { type: 'acao', segment: 'Alimentos' },
+  EMBR3: { type: 'acao', segment: 'Fabricante de aviões' }, AZUL4: { type: 'acao', segment: 'Companhia aérea' }, GGBR4: { type: 'acao', segment: 'Siderurgia' }, JBSS3: { type: 'acao', segment: 'Proteína animal' }, BRFS3: { type: 'acao', segment: 'Proteína animal' }, MRFG3: { type: 'acao', segment: 'Proteína animal' },
   // FIIs de tijolo (imóveis de verdade)
   HGLG11: { type: 'fii', kind: 'tijolo', segment: 'Logística' }, BTLG11: { type: 'fii', kind: 'tijolo', segment: 'Logística' },
   LVBI11: { type: 'fii', kind: 'tijolo', segment: 'Logística' }, XPLG11: { type: 'fii', kind: 'tijolo', segment: 'Logística' },
@@ -42,6 +42,7 @@ export const CATALOG: Record<string, CatalogItem> = {
   // ETFs
   BOVA11: { type: 'etf', segment: 'Ibovespa' }, SMAL11: { type: 'etf', segment: 'Small caps' }, IVVB11: { type: 'etf', segment: 'S&P 500 (EUA)' },
   HASH11: { type: 'etf', segment: 'Criptomoedas' }, GOLD11: { type: 'etf', segment: 'Ouro' }, DIVO11: { type: 'etf', segment: 'Dividendos' },
+  AUVP11: { type: 'etf', segment: 'Fundamentalista (AUVP)' },
 };
 
 export const FII_KINDS: Array<{ value: FiiKind; label: string; text: string }> = [
@@ -118,4 +119,20 @@ export function sortForList(assets: Asset[]) {
     if (ia >= 0 || ib >= 0) return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
     return (b.volume ?? 0) - (a.volume ?? 0);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Filtro fundamentalista: critérios PÚBLICOS do índice que o ETF AUVP11 replica
+// (Teva Ações Fundamentos). Aqui só dá para checar setor e valor de mercado;
+// lucro de 5 anos, dívida/EBIT e tempo de bolsa precisam ser conferidos fora.
+// ---------------------------------------------------------------------------
+export const AUVP_EXCLUDED_SEGMENTS = ['Varejo', 'Proteína animal', 'Companhia aérea'];
+export const AUVP_MIN_MARKET_CAP = 3_000_000_000;
+export type FilterResult = 'setor-excluido' | 'pequena' | 'para-estudar' | 'sem-dados';
+
+export function fundamentalFilter(a: Asset): FilterResult {
+  if (a.type !== 'acao') return 'sem-dados';
+  if (AUVP_EXCLUDED_SEGMENTS.includes(segmentOf(a)) || (a.sector != null && /retail|varejo/i.test(a.sector))) return 'setor-excluido';
+  if (a.marketCap == null) return 'sem-dados';
+  return a.marketCap >= AUVP_MIN_MARKET_CAP ? 'para-estudar' : 'pequena';
 }

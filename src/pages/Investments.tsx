@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Activity, ArrowDownRight, ArrowUpRight, Building, ChartLine, Info, Landmark, RefreshCw, Search, Star, TrendingDown, TrendingUp, WifiOff } from 'lucide-react';
 import { Button, Card, Empty, IconButton, Input, PageHeader, Segmented, cx } from '../components/ui';
-import { breadth, CATALOG, FII_KINDS, fiiKindOf, search, segmentOf, sortForList, topMovers, type Asset, type FiiKind } from '../lib/market';
+import { AUVP_EXCLUDED_SEGMENTS, breadth, CATALOG, fundamentalFilter, FII_KINDS, fiiKindOf, search, segmentOf, sortForList, topMovers, type Asset, type FiiKind } from '../lib/market';
 import { useMarket } from '../lib/marketData';
 import { usePrefs } from '../data/usePrefs';
 import { useRates } from './calculators/common';
 import { formatBRL, formatNumber } from '../lib/format';
 import { go } from '../router';
 
-type Tab = 'destaques' | 'acoes' | 'fiis' | 'etfs' | 'favoritos';
+type Tab = 'destaques' | 'acoes' | 'fiis' | 'etfs' | 'metodo' | 'favoritos';
 const TABS: Array<{ value: Tab; label: string }> = [
-  { value: 'destaques', label: 'Hoje' }, { value: 'acoes', label: 'Ações' }, { value: 'fiis', label: 'FIIs' }, { value: 'etfs', label: 'ETFs' }, { value: 'favoritos', label: '★' },
+  { value: 'destaques', label: 'Hoje' }, { value: 'acoes', label: 'Ações' }, { value: 'fiis', label: 'FIIs' }, { value: 'etfs', label: 'ETFs' }, { value: 'metodo', label: 'Método' }, { value: 'favoritos', label: '★' },
 ];
 const TYPE_COLOR: Record<Asset['type'], string> = { acao: '#3b82f6', fii: '#f59e0b', etf: '#8b5cf6', bdr: '#64748b' };
 const pct = (v: number | null) => (v == null ? '—' : `${v > 0 ? '+' : ''}${formatNumber(v, 2)}%`);
@@ -126,9 +126,16 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
         </section>
       </div>
 
-      <Segmented value={tab} onChange={(t) => go('investimentos', t)} options={TABS} className="mb-4" />
+      <div role="tablist" aria-label="Seções" className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+        {TABS.map((t) => (
+          <button key={t.value} type="button" role="tab" aria-selected={tab === t.value} onClick={() => go('investimentos', t.value)}
+            className={cx('press shrink-0 rounded-2xl px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] ring-1 transition', tab === t.value ? 'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-[0_6px_20px_-6px] shadow-brand-500 ring-brand-400/40' : 'bg-[#08070f] text-slate-400 ring-white/[.07] hover:text-white')}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      {tab !== 'destaques' && (
+      {tab !== 'destaques' && tab !== 'metodo' && (
         <div className="relative mb-3"><Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar ticker, nome ou segmento" className="pl-11" aria-label="Buscar ativo" /></div>
       )}
 
@@ -159,7 +166,8 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
           ))}
         </div>
       )}
-      {tab !== 'destaques' && (
+      {tab === 'metodo' && <MethodTab assets={assets} />}
+      {tab !== 'destaques' && tab !== 'metodo' && (
         list.length ? <ul className="stagger grid gap-2 lg:grid-cols-2">{list.map((a) => <AssetRow key={a.ticker} a={a} />)}</ul>
           : <Empty icon={tab === 'favoritos' ? <Star size={24} /> : <Search size={24} />} title={tab === 'favoritos' ? 'Nenhum favorito ainda' : m.loading ? 'Buscando cotações…' : 'Nada encontrado'} text={tab === 'favoritos' ? 'Toque na estrela de um ativo para acompanhar aqui.' : undefined} />
       )}
@@ -174,6 +182,86 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
           <p><b className="text-white">Alta do dia ≠ bom investimento.</b> Olhe o histórico, a empresa e diversifique.</p>
         </div>
         <p className="mt-4 text-[11px] text-slate-500">Informação, não recomendação de compra ou venda. Cotações com atraso, fonte: {m.data?.source ?? 'brapi.dev (B3)'}.</p>
+      </Card>
+    </div>
+  );
+}
+
+const FILTER_LABEL = {
+  'para-estudar': ['Passa no que dá para checar', 'bg-emerald-500/15 text-emerald-300'],
+  pequena: ['Abaixo de R$ 3 bi', 'bg-white/10 text-slate-300'],
+  'setor-excluido': ['Setor fora do índice', 'bg-rose-500/15 text-rose-300'],
+  'sem-dados': ['Sem dados de valor de mercado', 'bg-white/10 text-slate-400'],
+} as const;
+const LINKS = [
+  { name: 'Canal Investidor Sardinha (YouTube)', url: 'https://www.youtube.com/@InvestidorSardinha' },
+  { name: 'AUVP11 — página oficial', url: 'https://analitica.auvp.com.br/campanhas/auvp11' },
+  { name: 'Quem é Raul Sena (Investidor10)', url: 'https://investidor10.com.br/conteudo/raul-sena-o-investidor-sardinha/' },
+];
+
+/** Aba "Método": princípios públicos do Investidor Sardinha / AUVP, o ETF AUVP11 e o filtro pelos critérios públicos do índice. */
+function MethodTab({ assets }: { assets: Asset[] }) {
+  const auvp = assets.find((a) => a.ticker === 'AUVP11');
+  const stocks = sortForList(assets.filter((a) => a.type === 'acao' && CATALOG[a.ticker]));
+  const [show, setShow] = useState<'todas' | 'para-estudar'>('para-estudar');
+  const rows = stocks.map((a) => ({ a, r: fundamentalFilter(a) })).filter((x) => show === 'todas' || x.r === 'para-estudar');
+  return (
+    <div className="space-y-4">
+      <section className="tinted relative overflow-hidden rounded-[2rem] p-5 md:p-6" style={{ '--tone': '#0ea5e9' } as React.CSSProperties}>
+        <span className="watermark text-white"><ChartLine size={140} strokeWidth={1.2} /></span>
+        <div className="relative">
+          <p className="label text-white/70">Inspirado no Investidor Sardinha (AUVP)</p>
+          <h2 className="mt-1 font-display text-2xl font-black text-white">Investir como sócio, no longo prazo</h2>
+          <ul className="mt-3 space-y-2 text-sm text-white/90">
+            <li>• <b>Comprar e segurar (buy and hold):</b> montar posição em vários ativos e manter por anos, sem ficar comprando e vendendo.</li>
+            <li>• <b>Ser sócio de boas empresas,</b> na linha de Luiz Barsi: entender o negócio antes de comprar e acompanhar de perto.</li>
+            <li>• <b>Renda com dividendos:</b> reinvestir os proventos para a bola de neve crescer.</li>
+            <li>• <b>Diversificar</b> entre setores e tipos de ativo.</li>
+          </ul>
+        </div>
+      </section>
+
+      <Card title={<span className="flex items-center gap-2"><Star size={15} className="text-sky-400" /> AUVP11 — o ETF da AUVP</span>}>
+        {auvp ? <ul className="mb-3"><AssetRow a={auvp} /></ul> : <p className="mb-3 text-xs text-slate-500">Cotação do AUVP11 indisponível agora.</p>}
+        <ul className="space-y-1.5 text-sm text-slate-300">
+          <li>• Gestão BTG Pactual, replica o índice <b className="text-white">Teva Ações Fundamentos</b>. Na B3 desde junho de 2025.</li>
+          <li>• Escolhe empresas por fundamentos, não pelo volume negociado (diferente do Ibovespa).</li>
+          <li>• Não distribui dividendos: os proventos são reinvestidos no próprio fundo.</li>
+          <li>• Taxa divulgada de cerca de 0,49% ao ano — confira na página oficial antes de investir.</li>
+        </ul>
+      </Card>
+
+      <Card title={<span className="flex items-center gap-2"><Search size={15} className="text-emerald-400" /> Filtro pelos critérios públicos do índice</span>}>
+        <p className="text-sm text-slate-300">O índice do AUVP11 divulga estas regras. O Giro checa as duas primeiras sozinho; as outras você confere no RI da empresa ou em sites de análise.</p>
+        <ul className="mt-3 grid gap-1.5 text-xs text-slate-300 sm:grid-cols-2">
+          <li>✅ Fora: {AUVP_EXCLUDED_SEGMENTS.join(', ').toLowerCase()}</li>
+          <li>✅ Valor de mercado acima de R$ 3 bilhões</li>
+          <li>🔎 Lucro em todos os últimos 5 anos</li>
+          <li>🔎 Dívida de no máximo 3× o EBIT</li>
+          <li>🔎 Pelo menos 5 anos na bolsa</li>
+          <li>🔎 Liquidez mínima</li>
+        </ul>
+        <Segmented className="mt-4" value={show} onChange={setShow} options={[{ value: 'para-estudar', label: 'Para estudar' }, { value: 'todas', label: 'Todas' }]} />
+        {rows.length ? (
+          <ul className="mt-3 space-y-2" data-testid="filtro-lista">
+            {rows.map(({ a, r }) => (
+              <li key={a.ticker} className="flex min-w-0 items-center gap-3 rounded-2xl bg-white/[.03] px-3 py-2.5 ring-1 ring-white/[.05]" data-ticker={a.ticker}>
+                <div className="min-w-0 flex-1"><p className="font-display font-black text-white">{a.ticker}</p><p className="truncate text-[11px] text-slate-500">{segmentOf(a)}{a.marketCap ? ` · ${formatBRL(a.marketCap / 1e9).replace(',00', '')} bi` : ''}</p></div>
+                <span className={cx('label shrink-0 rounded-full px-2.5 py-1 !text-[9px]', FILTER_LABEL[r][1])}>{FILTER_LABEL[r][0]}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="mt-3 text-center text-xs text-slate-500">Sem cotações para filtrar agora.</p>}
+        <p className="mt-3 text-[11px] text-slate-500">"Passa no que dá para checar" não quer dizer que a empresa está no AUVP11 nem que é indicação de compra.</p>
+      </Card>
+
+      <Card title="Para estudar com a fonte">
+        <div className="space-y-2">
+          {LINKS.map((l) => (
+            <a key={l.url} href={l.url} target="_blank" rel="noreferrer" className="surface surface-hover flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-white">{l.name}<ArrowUpRight size={16} className="shrink-0 text-slate-500" /></a>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] text-slate-500">Resumo feito a partir de informações públicas. O Giro não tem ligação com o Investidor Sardinha nem com a AUVP. Opiniões e carteiras deles mudam com o tempo — confira sempre na fonte. Não é recomendação de investimento.</p>
       </Card>
     </div>
   );
