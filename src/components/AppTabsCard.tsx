@@ -24,7 +24,7 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 
 /** Ajustes → Personalizar: modo motorista e abas do menu. */
 export function AppTabsCard({ focus }: { focus?: boolean }) {
-  const { driver, visible, setDriver, setTab } = usePrefs();
+  const { driver, visible, setDriver, setTab, homeInvest, setHomeInvest } = usePrefs();
   const toast = useToast();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { if (focus) setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300); }, [focus]);
@@ -54,6 +54,11 @@ export function AppTabsCard({ focus }: { focus?: boolean }) {
             );
           })}
         </ul>
+        <p className="label mb-2 mt-5 text-slate-500">No Início</p>
+        <div className="flex items-center gap-3 py-2">
+          <div className="min-w-0 flex-1"><p className={cx('text-sm font-bold', homeInvest ? 'text-white' : 'text-slate-500')}>Meus investimentos hoje</p><p className="text-[11px] text-slate-500">Quanto a carteira variou e quais ativos dela sobem ou caem</p></div>
+          <Toggle on={homeInvest} label="Mostrar investimentos no Início" onChange={setHomeInvest} />
+        </div>
         <p className="mt-2 text-[11px] text-slate-500">Início, Lançamentos e Ajustes ficam sempre. Esconder uma aba não apaga nada.</p>
       </Card>
     </div>

@@ -23,7 +23,10 @@ export function usePrefs() {
   const toggleWatch = useCallback((ticker: string) => save({ watchlist: watchlist.includes(ticker) ? watchlist.filter((t) => t !== ticker) : [...watchlist, ticker] }), [save, watchlist]);
   const setDriver = useCallback((on: boolean) => save({ driver: on }), [save]);
   const setTab = useCallback((tab: string, on: boolean) => save({ tabs: { [tab]: on } }), [save]);
-  return { driver, visible, setDriver, setTab, watchlist, toggleWatch };
+  /** Cartão "Meus investimentos hoje" no Início (opcional; ligado por padrão para quem tem carteira). */
+  const homeInvest = prefs?.tabs?.['inicio-investimentos'] ?? true;
+  const setHomeInvest = useCallback((on: boolean) => save({ tabs: { 'inicio-investimentos': on } }), [save]);
+  return { driver, visible, setDriver, setTab, watchlist, toggleWatch, homeInvest, setHomeInvest };
 }
 
 /** 4º botão da barra do celular: Motorista para quem trabalha com app; senão a primeira aba útil ligada. */

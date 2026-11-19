@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { InvestStrip } from '../components/InvestStrip';
 import { HandCoins, ChevronRight, PiggyBank as PiggyBankIcon } from 'lucide-react';
 import { usePrefs } from '../data/usePrefs';
 import { debtsSummary, openInstallmentsUntil } from '../lib/debts';
@@ -41,7 +42,7 @@ export default function Dashboard() {
   const recent = data.transactions.slice(0, 6);
   const isCurrent = month === currentMonth();
 
-  const isEmpty = data.transactions.length === 0 && data.fixed.length === 0 && data.sessions.length === 0 && data.debts.length === 0;
+  const isEmpty = data.transactions.length === 0 && data.fixed.length === 0 && data.sessions.length === 0 && data.debts.length === 0 && data.investments.length === 0;
   const [backupTick, setBackupTick] = useState(0);
   const backupDays = useMemo(() => {
     void backupTick;
@@ -126,6 +127,7 @@ export default function Dashboard() {
             : <Stat label="Guardado em metas" money={goalsSaved} tone="info" icon={<PiggyBankIcon />} sub={`${data.goals.length} ${data.goals.length === 1 ? 'meta' : 'metas'}`} />}
       </div>
 
+      {isCurrent && <InvestStrip />}
       {isCurrent && <DebtStrip />}
       {isCurrent && (
         <div className="grid gap-4 lg:grid-cols-2">
