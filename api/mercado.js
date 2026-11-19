@@ -22,6 +22,28 @@ const slim = (s) => ({
   logo: s.logo ?? s.logourl ?? null, sector: s.sector ?? null, subsector: s.subsector ?? null, type: s.type ?? null, subType: s.subType ?? null,
 });
 
+// Criptomoedas: a brapi só libera no plano pago; usamos a CoinGecko (grátis, preços em reais)
+// e, se ela falhar, o Mercado Bitcoin.
+const COINS = ['bitcoin', 'ethereum', 'tether', 'solana', 'ripple', 'binancecoin', 'usd-coin', 'cardano', 'dogecoin', 'tron', 'chainlink', 'avalanche-2', 'litecoin', 'polkadot', 'shiba-inu'];
+const MB = ['BTC', 'ETH', 'USDT', 'SOL', 'XRP', 'USDC', 'ADA', 'DOGE', 'LINK', 'LTC', 'DOT', 'AVAX'];
+async function crypto() {
+  try {
+    const key = process.env.COINGECKO_API_KEY;
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=brl&ids=${COINS.join(',')}&price_change_percentage=24h`, { headers: { accept: 'application/json', ...(key ? { 'x-cg-demo-api-key': key } : {}) } });
+    if (!r.ok) throw new Error(`coingecko ${r.status}`);
+    const list = await r.json();
+    if (!Array.isArray(list) || !list.length) throw new Error('coingecko vazio');
+    return { source: 'CoinGecko', assets: list.map((c) => ({ stock: String(c.symbol).toUpperCase(), name: c.name, close: c.current_price, change: c.price_change_percentage_24h, volume: c.current_price ? c.total_volume / c.current_price : null, market_cap: c.market_cap, logo: c.image, sector: 'Criptomoeda', type: 'crypto' })) };
+  } catch {
+    try {
+      const r = await fetch(`https://api.mercadobitcoin.net/api/v4/tickers?symbols=${MB.map((s) => `${s}-BRL`).join(',')}`, { headers: { accept: 'application/json' } });
+      if (!r.ok) return null;
+      const list = await r.json();
+      return { source: 'Mercado Bitcoin', assets: list.map((c) => { const last = Number(c.last); const open = Number(c.open); return { stock: String(c.pair).split('-')[0], name: String(c.pair).split('-')[0], close: last, change: open ? ((last - open) / open) * 100 : null, volume: Number(c.vol), market_cap: null, logo: null, sector: 'Criptomoeda', type: 'crypto' }; }) };
+    } catch { return null; }
+  }
+}
+
 const index = async (symbol, name, token) => {
   try {
     const r = (await get(`/quote/${encodeURIComponent(symbol)}`, token)).results?.[0];
@@ -49,9 +71,10 @@ export default async function handler(_req, res) {
       try { const r = (await get(`/quote/${t}`, token)).results?.[0]; return r ? slim(r) : null; } catch { return null; }
     }));
     assets.push(...extra.filter(Boolean));
-    const [ibov, ifix] = await Promise.all([index('^BVSP', 'Ibovespa', token), index('IFIX.SA', 'IFIX', token)]);
+    const [ibov, ifix, cr] = await Promise.all([index('^BVSP', 'Ibovespa', token), index('IFIX.SA', 'IFIX', token), crypto()]);
+    if (cr) assets.push(...cr.assets.filter((c) => c.stock && c.close != null && !seen.has(c.stock) && seen.add(c.stock)));
     res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
-    res.status(200).json({ updatedAt: new Date().toISOString(), source: 'brapi.dev (B3, com atraso)', index: ibov, ifix, assets });
+    res.status(200).json({ updatedAt: new Date().toISOString(), source: `brapi.dev (B3, com atraso)${cr ? ` · cripto: ${cr.source}` : ''}`, index: ibov, ifix, assets });
   } catch (e) {
     res.status(502).json({ error: String(e && e.message ? e.message : e) });
   }

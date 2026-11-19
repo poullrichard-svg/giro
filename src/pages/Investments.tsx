@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Activity, ArrowDownRight, ArrowUpRight, Building, ChartLine, Info, Landmark, RefreshCw, Search, Star, TrendingDown, TrendingUp, WifiOff } from 'lucide-react';
 import { Button, Card, Empty, IconButton, Input, PageHeader, Segmented, cx } from '../components/ui';
 import { AUVP_EXCLUDED_SEGMENTS, breadth, CATALOG, fundamentalFilter, FII_KINDS, fiiKindOf, search, segmentOf, sortForList, topMovers, type Asset, type FiiKind } from '../lib/market';
@@ -7,12 +7,18 @@ import { usePrefs } from '../data/usePrefs';
 import { useRates } from './calculators/common';
 import { formatBRL, formatNumber } from '../lib/format';
 import { go } from '../router';
+import { useData } from '../data/DataProvider';
+import { AssetSheet, SheetCtx, useAssetSheet } from './investments/AssetSheet';
+import { PortfolioTab, type OpPreset } from './investments/Portfolio';
+import { guessKind } from '../lib/portfolio';
 
-type Tab = 'destaques' | 'acoes' | 'fiis' | 'etfs' | 'metodo' | 'favoritos';
+type Tab = 'carteira' | 'destaques' | 'acoes' | 'fiis' | 'etfs' | 'cripto' | 'metodo' | 'favoritos';
 const TABS: Array<{ value: Tab; label: string }> = [
-  { value: 'destaques', label: 'Hoje' }, { value: 'acoes', label: 'Ações' }, { value: 'fiis', label: 'FIIs' }, { value: 'etfs', label: 'ETFs' }, { value: 'metodo', label: 'Método' }, { value: 'favoritos', label: '★' },
+  { value: 'carteira', label: 'Carteira' }, { value: 'destaques', label: 'Hoje' }, { value: 'acoes', label: 'Ações' }, { value: 'fiis', label: 'FIIs' }, { value: 'etfs', label: 'ETFs' },
+  { value: 'cripto', label: 'Cripto' }, { value: 'metodo', label: 'Método' }, { value: 'favoritos', label: '★' },
 ];
-const TYPE_COLOR: Record<Asset['type'], string> = { acao: '#3b82f6', fii: '#f59e0b', etf: '#8b5cf6', bdr: '#64748b' };
+const TYPE_COLOR: Record<Asset['type'], string> = { acao: '#3b82f6', fii: '#f59e0b', etf: '#8b5cf6', bdr: '#64748b', cripto: '#f97316' };
+let pendingPreset: OpPreset | null = null;
 const pct = (v: number | null) => (v == null ? '—' : `${v > 0 ? '+' : ''}${formatNumber(v, 2)}%`);
 
 function Change({ v, big }: { v: number | null; big?: boolean }) {
@@ -30,8 +36,10 @@ function AssetRow({ a, rank }: { a: Asset; rank?: number }) {
   const [logoFailed, setLogoFailed] = useState(false);
   const kind = fiiKindOf(a);
   const color = TYPE_COLOR[a.type];
+  const sheet = useAssetSheet();
   return (
     <li className="surface flex min-w-0 items-center gap-3 rounded-[1.3rem] p-3" data-ticker={a.ticker}>
+      <button type="button" onClick={() => sheet.open(a)} aria-label={`Ver ficha de ${a.ticker}`} className="press flex min-w-0 flex-1 items-center gap-3 text-left">
       {rank != null && <span className="w-4 shrink-0 text-center font-display text-sm font-black text-slate-500">{rank}</span>}
       <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[10px] font-black text-white" style={{ background: `color-mix(in srgb, ${color} 30%, #0b0915)`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 45%, transparent)` }}>
         {a.logo && !logoFailed ? <img src={a.logo} alt="" className="h-full w-full bg-white object-contain p-1" loading="lazy" onError={() => setLogoFailed(true)} /> : a.ticker.slice(0, 4)}
@@ -44,6 +52,7 @@ function AssetRow({ a, rank }: { a: Asset; rank?: number }) {
         <p className="font-mono text-sm font-extrabold text-white">{a.price != null ? formatBRL(a.price) : '—'}</p>
         <Change v={a.changePct} />
       </div>
+      </button>
       <IconButton label={fav ? `Tirar ${a.ticker} dos favoritos` : `Favoritar ${a.ticker}`} onClick={() => toggleWatch(a.ticker)} className={cx('h-9 w-9', fav ? 'bg-amber-400/15 text-amber-300 ring-amber-400/30' : '')}><Star size={16} fill={fav ? 'currentColor' : 'none'} /></IconButton>
     </li>
   );
@@ -62,7 +71,18 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
   const m = useMarket();
   const rates = useRates();
   const { watchlist } = usePrefs();
-  const tab: Tab = (TABS.some((t) => t.value === tabParam) ? tabParam : 'destaques') as Tab;
+  const { data } = useData();
+  const tab: Tab = (TABS.some((t) => t.value === tabParam) ? tabParam : data.investments.length ? 'carteira' : 'destaques') as Tab;
+  const [sheetAsset, setSheetAsset] = useState<Asset | null>(null);
+  // A troca de aba recria a tela: a compra pré-preenchida passa por fora do estado.
+  const [preset, setPreset] = useState<OpPreset | null>(() => { const x = pendingPreset; pendingPreset = null; return x; });
+  const clearPreset = useCallback(() => setPreset(null), []);
+  const addToPortfolio = useCallback((a: Asset) => {
+    const pr: OpPreset = { ticker: a.ticker, kind: guessKind(a.ticker, [a]), side: 'compra', price: a.price ?? undefined };
+    setSheetAsset(null);
+    if (tab === 'carteira') setPreset(pr); else { pendingPreset = pr; go('investimentos', 'carteira'); }
+  }, [tab]);
+  const sheetApi = useMemo(() => ({ open: setSheetAsset, onAdd: addToPortfolio }), [addToPortfolio]);
   const [q, setQ] = useState('');
   const [fiiKind, setFiiKind] = useState<FiiKind | 'todos'>('todos');
   const [segment, setSegment] = useState('todos');
@@ -77,6 +97,7 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
     if (tab === 'acoes') l = stocks.filter((a) => segment === 'todos' || segmentOf(a) === segment);
     if (tab === 'fiis') l = ofType('fii').filter((a) => fiiKind === 'todos' || fiiKindOf(a) === fiiKind);
     if (tab === 'etfs') l = ofType('etf');
+    if (tab === 'cripto') l = assets.filter((a) => a.type === 'cripto').sort((x, y) => (y.marketCap ?? 0) - (x.marketCap ?? 0));
     if (tab === 'favoritos') l = assets.filter((a) => watchlist.includes(a.ticker));
     return search(l, q).slice(0, 80);
   }, [tab, stocks, segment, fiiKind, assets, watchlist, q]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -84,6 +105,7 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
   const time = m.data ? new Date(m.data.updatedAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
 
   return (
+    <SheetCtx.Provider value={sheetApi}>
     <div>
       <PageHeader eyebrow="Bolsa e renda fixa" title="Investimentos" subtitle={time ? `Cotações da B3 com atraso · atualizado ${time}` : 'Cotações da B3 com atraso'}
         actions={<Button variant="soft" onClick={() => m.reload()} disabled={m.loading} aria-label="Atualizar cotações"><RefreshCw size={15} className={m.loading ? 'animate-spin' : ''} /> {m.loading ? 'Atualizando…' : 'Atualizar'}</Button>} />
@@ -98,7 +120,7 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
         </div>
       )}
 
-      <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      {tab !== 'carteira' && <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <section className="tinted relative overflow-hidden rounded-[2rem] p-5" style={{ '--tone': br.avg >= 0 ? '#10b981' : '#e11d48' } as React.CSSProperties}>
           <span className="watermark text-white"><Activity size={140} strokeWidth={1.2} /></span>
           <div className="relative">
@@ -128,7 +150,7 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
           </div>
           <p className="mt-3 text-xs text-slate-400">R$ 1.000 a 100% do CDI rendem cerca de <b className="text-emerald-300">{formatBRL(cdiMonth)}</b> por mês (antes do IR). <button type="button" onClick={() => go('calculadoras', 'rendimento')} className="font-bold text-brand-300 underline underline-offset-2">Simular</button></p>
         </section>
-      </div>
+      </div>}
 
       <div role="tablist" aria-label="Seções" className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
         {TABS.map((t) => (
@@ -139,7 +161,8 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
         ))}
       </div>
 
-      {tab !== 'destaques' && tab !== 'metodo' && (
+      {tab === 'carteira' && <PortfolioTab assets={assets} preset={preset} onPresetUsed={clearPreset} />}
+      {!['destaques', 'metodo', 'carteira'].includes(tab) && (
         <div className="relative mb-3"><Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar ticker, nome ou segmento" className="pl-11" aria-label="Buscar ativo" /></div>
       )}
 
@@ -171,9 +194,9 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
         </div>
       )}
       {tab === 'metodo' && <MethodTab assets={assets} />}
-      {tab !== 'destaques' && tab !== 'metodo' && (
+      {!['destaques', 'metodo', 'carteira'].includes(tab) && (
         list.length ? <ul className="stagger grid gap-2 lg:grid-cols-2">{list.map((a) => <AssetRow key={a.ticker} a={a} />)}</ul>
-          : <Empty icon={tab === 'favoritos' ? <Star size={24} /> : <Search size={24} />} title={tab === 'favoritos' ? 'Nenhum favorito ainda' : m.loading ? 'Buscando cotações…' : 'Nada encontrado'} text={tab === 'favoritos' ? 'Toque na estrela de um ativo para acompanhar aqui.' : undefined} />
+          : <Empty icon={tab === 'favoritos' ? <Star size={24} /> : <Search size={24} />} title={tab === 'favoritos' ? 'Nenhum favorito ainda' : m.loading ? 'Buscando cotações…' : tab === 'cripto' && !q ? 'Cotações de cripto indisponíveis agora' : 'Nada encontrado'} text={tab === 'favoritos' ? 'Toque na estrela de um ativo para acompanhar aqui.' : undefined} />
       )}
 
       <Card className="mt-5" title={<span className="flex items-center gap-2"><Info size={15} className="text-sky-400" /> Entenda os tipos</span>}>
@@ -182,12 +205,15 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
           <p><b className="text-white">FIIs de tijolo:</b> donos de imóveis (galpões, shoppings, escritórios). Pagam aluguéis todo mês.</p>
           <p><b className="text-white">FIIs de papel:</b> emprestam para o setor imobiliário (CRIs). Renda acompanha juros e inflação.</p>
           <p><b className="text-white">ETFs:</b> uma cesta pronta (ex.: BOVA11 = Ibovespa, IVVB11 = bolsa dos EUA).</p>
+          <p><b className="text-white">Criptomoedas:</b> dinheiro digital (Bitcoin, Ethereum…). Sobem e caem muito, 24h por dia — se tiver, que seja uma parte pequena.</p>
           <p><b className="text-white">Renda fixa:</b> Tesouro, CDB, LCI/LCA. Antes da bolsa, monte sua reserva de emergência aqui.</p>
           <p><b className="text-white">Alta do dia ≠ bom investimento.</b> Olhe o histórico, a empresa e diversifique.</p>
         </div>
         <p className="mt-4 text-[11px] text-slate-500">Informação, não recomendação de compra ou venda. Cotações com atraso, fonte: {m.data?.source ?? 'brapi.dev (B3)'}.</p>
       </Card>
+      <AssetSheet asset={sheetAsset} onClose={() => setSheetAsset(null)} onAdd={addToPortfolio} />
     </div>
+    </SheetCtx.Provider>
   );
 }
 

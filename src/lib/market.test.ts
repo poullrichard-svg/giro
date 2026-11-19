@@ -12,6 +12,7 @@ describe('mercado', () => {
     expect(normalizeAsset({ stock: 'AAPL34', type: 'bdr', close: 50 })!.type).toBe('bdr');
     expect(normalizeAsset({ stock: 'ABCD3', sector: 'Retail Trade', close: 5 })!.sector).toBe('Varejo');
     expect(normalizeAsset({ name: 'sem ticker' })).toBeNull();
+    expect(normalizeAsset({ stock: 'BTC', name: 'Bitcoin', close: 500000, change: -1, type: 'crypto' })!).toMatchObject({ ticker: 'BTC', type: 'cripto' });
   });
   it('maiores altas/baixas só entre ativos com liquidez', () => {
     const list = [

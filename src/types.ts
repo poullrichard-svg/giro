@@ -259,3 +259,21 @@ export interface AppPrefs {
   /** Ativos favoritos no painel de investimentos (tickers). */
   watchlist?: string[];
 }
+
+/** Operação da carteira de investimentos (compra, venda ou atualização de valor da renda fixa). */
+export type InvestmentKind = 'acao' | 'fii' | 'etf' | 'bdr' | 'cripto' | 'renda-fixa' | 'outro';
+export interface InvestmentOp {
+  id: string;
+  /** Código (PETR4, BTC) ou nome (ex.: "CDB Banco Inter 120% CDI"). */
+  ticker: string;
+  kind: InvestmentKind;
+  side: 'compra' | 'venda' | 'valor';
+  quantity: number;
+  /** Preço unitário. Em "valor": valor total atual da posição. */
+  price: number;
+  fees?: number | null;
+  date: string;
+  note?: string | null;
+  /** Para não importar a mesma linha duas vezes. */
+  externalId?: string | null;
+}

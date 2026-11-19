@@ -3,7 +3,7 @@
  * Cada coleção vira um "object store" com chave `id`.
  * No futuro, um módulo de sincronização (ex.: Supabase) pode ler/gravar daqui.
  */
-import type { DriverSession, FixedBill, FixedPayment, Goal, ShoppingItem, Transaction, Vehicle, VehicleExpense, WorkProfile, Account, Card, Budget, Attachment, Simulation, GoalContribution, Debt, AppPrefs } from '../types';
+import type { DriverSession, FixedBill, FixedPayment, Goal, ShoppingItem, Transaction, Vehicle, VehicleExpense, WorkProfile, Account, Card, Budget, Attachment, Simulation, GoalContribution, Debt, AppPrefs, InvestmentOp } from '../types';
 
 export interface Collections {
   transactions: Transaction;
@@ -23,9 +23,10 @@ export interface Collections {
   goalContributions: GoalContribution;
   debts: Debt;
   prefs: AppPrefs;
+  investments: InvestmentOp;
 }
 export type CollectionKey = keyof Collections;
-export const COLLECTIONS: CollectionKey[] = ['transactions', 'fixed', 'fixedPayments', 'sessions', 'vehicles', 'vehicleExpenses', 'goals', 'shopping', 'settings', 'accounts', 'cards', 'budgets', 'attachments', 'simulations', 'goalContributions', 'debts', 'prefs'];
+export const COLLECTIONS: CollectionKey[] = ['transactions', 'fixed', 'fixedPayments', 'sessions', 'vehicles', 'vehicleExpenses', 'goals', 'shopping', 'settings', 'accounts', 'cards', 'budgets', 'attachments', 'simulations', 'goalContributions', 'debts', 'prefs', 'investments'];
 
 /** Todo registro guarda quando foi criado/alterado — útil para ordenar e, no futuro, sincronizar. */
 export type Stored<T> = T & { createdAt: string; updatedAt: string };
@@ -34,7 +35,7 @@ const DB_NAME = 'giro';
 /** Fila de sincronização: chaves "coleção/id" alteradas no aparelho e ainda não enviadas à nuvem. */
 export const OUTBOX = '_outbox';
 export interface OutboxEntry { key: string; collection: CollectionKey; id: string; at: string }
-const DB_VERSION = 10; // v10: "prefs" · v9: "debts" · v8: "_outbox" · v7: "goalContributions" · v6: "simulations" · v2: "settings" · v3: "accounts" e "cards" · v4: "budgets" · v5: "attachments"
+const DB_VERSION = 11; // v11: "investments" · v10: "prefs" · v9: "debts" · v8: "_outbox" · v7: "goalContributions" · v6: "simulations" · v2: "settings" · v3: "accounts" e "cards" · v4: "budgets" · v5: "attachments"
 let dbPromise: Promise<IDBDatabase> | null = null;
 
 export function openDB(): Promise<IDBDatabase> {

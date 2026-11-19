@@ -3,7 +3,7 @@
  * Cotações vêm da função /api/mercado (brapi.dev, com atraso). Nada aqui é recomendação.
  */
 
-export type AssetType = 'acao' | 'fii' | 'etf' | 'bdr';
+export type AssetType = 'acao' | 'fii' | 'etf' | 'bdr' | 'cripto';
 export type FiiKind = 'tijolo' | 'papel' | 'fof' | 'hibrido';
 
 export interface Asset {
@@ -66,11 +66,11 @@ const SECTOR_PT: Record<string, string> = {
  */
 export function normalizeAsset(raw: any): Asset | null {
   const ticker = String(raw?.stock ?? raw?.symbol ?? raw?.ticker ?? '').toUpperCase().trim();
-  if (!/^[A-Z0-9^.]{4,12}$/.test(ticker)) return null;
+  if (!/^[A-Z0-9^.]{2,12}$/.test(ticker)) return null;
   const cat = CATALOG[ticker];
   const rawType = String(raw?.type ?? '').toLowerCase();
   const sub = String(raw?.subType ?? raw?.subtype ?? '').toLowerCase();
-  let type: AssetType | null = cat?.type ?? null;
+  let type: AssetType | null = cat?.type ?? (rawType === 'crypto' || rawType === 'cripto' ? 'cripto' : null);
   if (!type) {
     if (sub === 'fii' || sub === 'fi-agro' || sub === 'fi-infra') type = 'fii';
     else if (sub === 'etf') type = 'etf';
@@ -106,7 +106,7 @@ export const moneyVolume = (a: Asset) => (a.price ?? 0) * (a.volume ?? 0);
  * e, para ações, valor de mercado ≥ R$ 1 bi (quando informado). Evita "micos" que sobem 30% com meia dúzia de negócios.
  */
 export function topMovers(assets: Asset[], n = 5, minMoney = 10_000_000) {
-  const liquid = assets.filter((a) => a.changePct != null && a.price != null && a.price >= 1 && a.type !== 'bdr'
+  const liquid = assets.filter((a) => a.changePct != null && a.price != null && a.price >= 1 && a.type !== 'bdr' && a.type !== 'cripto'
     && moneyVolume(a) >= (a.type === 'acao' ? minMoney : minMoney / 3)
     && (a.type !== 'acao' || a.marketCap == null || a.marketCap >= 1_000_000_000));
   const up = [...liquid].filter((a) => a.changePct! > 0).sort((a, b) => b.changePct! - a.changePct!).slice(0, n);
@@ -155,3 +155,22 @@ export function fundamentalFilter(a: Asset): FilterResult {
   if (a.marketCap == null) return 'sem-dados';
   return a.marketCap >= AUVP_MIN_MARKET_CAP ? 'para-estudar' : 'pequena';
 }
+
+/** O que é cada criptomoeda (resumo em português para a ficha). */
+export const CRYPTO_INFO: Record<string, string> = {
+  BTC: 'A primeira e maior criptomoeda. Oferta limitada a 21 milhões de unidades; muita gente usa como "reserva de valor digital".',
+  ETH: 'Moeda da rede Ethereum, onde rodam contratos inteligentes, aplicativos descentralizados e boa parte das stablecoins.',
+  USDT: 'Stablecoin: tenta valer sempre 1 dólar. Usada para guardar valor em dólar dentro do mundo cripto.',
+  USDC: 'Stablecoin lastreada em dólar, emitida pela Circle. Deve valer sempre US$ 1.',
+  SOL: 'Moeda da rede Solana, conhecida por transações rápidas e baratas.',
+  XRP: 'Moeda ligada à Ripple, focada em transferências internacionais entre instituições.',
+  BNB: 'Moeda da corretora Binance e da sua rede (BNB Chain); dá desconto em taxas.',
+  ADA: 'Moeda da rede Cardano, projeto com foco em pesquisa acadêmica e segurança.',
+  DOGE: 'Nasceu como piada (meme do cachorro Shiba). Muito volátil e movida por redes sociais.',
+  TRX: 'Moeda da rede Tron, muito usada para transferir stablecoins com taxa baixa.',
+  LINK: 'Moeda da Chainlink, que leva dados do mundo real (preços, clima) para contratos inteligentes.',
+  AVAX: 'Moeda da rede Avalanche, plataforma de contratos inteligentes rápida.',
+  LTC: 'Litecoin: uma das mais antigas, parecida com o Bitcoin, com transações mais rápidas.',
+  DOT: 'Moeda da Polkadot, rede que conecta várias blockchains diferentes.',
+  SHIB: 'Moeda-meme inspirada na Dogecoin. Altíssimo risco e volatilidade.',
+};
