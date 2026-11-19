@@ -50,3 +50,9 @@ que só deixam cada usuário ver e alterar o que é dele. **Nunca** coloque a *s
    ```
 3. O painel (Ajustes → Conta → Painel do administrador) mostra só médias de quem marcou
    "participar das estatísticas". Grupos com menos de 5 pessoas não aparecem.
+
+## Cotações do painel de Investimentos (brapi.dev)
+1. Crie uma conta grátis em https://brapi.dev e copie o seu token.
+2. Na Vercel: **Settings → Environment Variables** → `BRAPI_TOKEN` = seu token (só Production/Preview).
+   Fica só no servidor (função `api/mercado.js`); nunca vai para o app.
+3. **Deployments → ⋯ → Redeploy**. As cotações ficam em cache por 15 minutos.

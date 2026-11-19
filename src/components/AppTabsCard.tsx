@@ -8,7 +8,7 @@ import { useToast } from '../data/toast';
 
 const HINT: Record<string, string> = {
   contas: 'Bancos, carteira e cartões de crédito', fixas: 'Aluguel, luz, salário…', dividas: 'Acordos e parcelas para quitar',
-  veiculos: 'IPVA, manutenção e gastos do carro/moto', calculadoras: 'Juros, financiamento, consórcio…', metas: 'Objetivos e aportes',
+  veiculos: 'IPVA, manutenção e gastos do carro/moto', calculadoras: 'Juros, financiamento, consórcio…', investimentos: 'Cotações de ações, FIIs e ETFs', metas: 'Objetivos e aportes',
   compras: 'Lista de mercado', assistente: 'Perguntas para a IA (precisa de chave)',
 };
 

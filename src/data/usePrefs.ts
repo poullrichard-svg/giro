@@ -15,12 +15,15 @@ export function usePrefs() {
   }), [data.sessions.length, data.settings, data.vehicles.length, profile?.occupation]);
   const driver = driverOn(prefs, ctx);
   const visible = useCallback((tab: string) => tabVisible(tab, prefs, ctx), [prefs, ctx]);
-  const save = useCallback((patch: { driver?: boolean; tabs?: Record<string, boolean> }) => put('prefs', {
+  const save = useCallback((patch: { driver?: boolean; tabs?: Record<string, boolean>; watchlist?: string[] }) => put('prefs', {
     id: PREFS_ID, driver: patch.driver ?? prefs?.driver ?? null, tabs: { ...(prefs?.tabs ?? {}), ...(patch.tabs ?? {}) },
+    watchlist: patch.watchlist ?? prefs?.watchlist ?? [],
   }), [prefs, put]);
+  const watchlist = prefs?.watchlist ?? [];
+  const toggleWatch = useCallback((ticker: string) => save({ watchlist: watchlist.includes(ticker) ? watchlist.filter((t) => t !== ticker) : [...watchlist, ticker] }), [save, watchlist]);
   const setDriver = useCallback((on: boolean) => save({ driver: on }), [save]);
   const setTab = useCallback((tab: string, on: boolean) => save({ tabs: { [tab]: on } }), [save]);
-  return { driver, visible, setDriver, setTab };
+  return { driver, visible, setDriver, setTab, watchlist, toggleWatch };
 }
 
 /** 4º botão da barra do celular: Motorista para quem trabalha com app; senão a primeira aba útil ligada. */

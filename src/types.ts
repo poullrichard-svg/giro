@@ -256,4 +256,6 @@ export interface AppPrefs {
   driver?: boolean | null;
   /** Abas ligadas/desligadas pelo usuário. Ausente = padrão. */
   tabs?: Record<string, boolean>;
+  /** Ativos favoritos no painel de investimentos (tickers). */
+  watchlist?: string[];
 }

@@ -7,7 +7,7 @@ export const PREFS_ID = 'app';
 export const DRIVER_OCCUPATIONS = ['motorista-app', 'entregador'];
 
 /** Abas que a pessoa pode esconder (Início, Lançamentos e Ajustes ficam sempre). */
-export const OPTIONAL_TABS = ['contas', 'fixas', 'dividas', 'veiculos', 'calculadoras', 'metas', 'compras', 'assistente'] as const;
+export const OPTIONAL_TABS = ['contas', 'fixas', 'dividas', 'veiculos', 'calculadoras', 'investimentos', 'metas', 'compras', 'assistente'] as const;
 export type OptionalTab = (typeof OPTIONAL_TABS)[number];
 
 export interface PrefsContext { hasSessions: boolean; hasWorkProfile: boolean; hasVehicles: boolean; occupation?: string | null }

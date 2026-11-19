@@ -1,6 +1,6 @@
 import { createContext, lazy, Suspense, useContext, useState, type ReactNode } from 'react';
 import {
-  Calculator, Car, CarFront, Flag, Landmark, LayoutDashboard, Menu, Plus, BarChart3, HandCoins, Repeat, ShoppingCart, Sparkles, Wallet,
+  Calculator, Car, CarFront, Flag, Landmark, LayoutDashboard, Menu, Plus, BarChart3, ChartLine, HandCoins, Repeat, ShoppingCart, Sparkles, Wallet,
 } from 'lucide-react';
 import { go, useRoute, type Route } from '../router';
 import { useData } from '../data/DataProvider';
@@ -19,6 +19,7 @@ const Debts = lazy(() => import('../pages/Debts'));
 const Driver = lazy(() => import('../pages/Driver'));
 const Vehicles = lazy(() => import('../pages/Vehicles'));
 const Calculators = lazy(() => import('../pages/calculators/Calculators'));
+const Investments = lazy(() => import('../pages/Investments'));
 const Goals = lazy(() => import('../pages/Goals'));
 const Shopping = lazy(() => import('../pages/Shopping'));
 const More = lazy(() => import('../pages/More'));
@@ -34,6 +35,7 @@ const NAV: Array<{ id: Route; label: string; icon: typeof Wallet }> = [
   { id: 'motorista', label: 'Motorista', icon: Car },
   { id: 'veiculos', label: 'Veículos', icon: CarFront },
   { id: 'calculadoras', label: 'Calculadoras', icon: Calculator },
+  { id: 'investimentos', label: 'Investimentos', icon: ChartLine },
   { id: 'metas', label: 'Metas', icon: Flag },
   { id: 'compras', label: 'Lista de compras', icon: ShoppingCart },
   { id: 'assistente', label: 'Assistente IA', icon: Sparkles },
@@ -56,7 +58,7 @@ export default function Shell() {
 
   const page: Record<Route, ReactNode> = {
     inicio: <Dashboard />, lancamentos: <Transactions />, contas: <Accounts id={param} />, fixas: <FixedBills />, dividas: <Debts id={param} />, motorista: <Driver />,
-    veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, metas: <Goals id={param} />, compras: <Shopping />, assistente: <Assistant />, admin: <Admin />, mais: <More section={param} />,
+    veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, investimentos: <Investments tab={param} />, metas: <Goals id={param} />, compras: <Shopping />, assistente: <Assistant />, admin: <Admin />, mais: <More section={param} />,
   };
 
   const loader = <div className="flex flex-col items-center gap-3 py-24 text-slate-400"><Logo size={48} spin /><span className="label">Abrindo seus dados</span></div>;
