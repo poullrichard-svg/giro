@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { normalizeAsset, type Asset } from './market';
 
-export interface MarketData { updatedAt: string; source: string; index: { name: string; points: number | null; changePct: number | null } | null; assets: Asset[] }
+export interface IndexQuote { name: string; points: number | null; changePct: number | null }
+export interface MarketData { updatedAt: string; source: string; index: IndexQuote | null; ifix?: IndexQuote | null; assets: Asset[] }
 type State = { data: MarketData | null; loading: boolean; error: null | 'sem-token' | 'offline' | 'erro'; stale: boolean };
 const KEY = 'giro.market';
 
@@ -17,7 +18,7 @@ export function useMarket() {
       const j = await r.json().catch(() => null);
       if (!j || (r.ok && !Array.isArray(j.assets))) { setS((x) => ({ ...x, loading: false, error: 'erro' })); return; }
       if (!r.ok) { setS((x) => ({ ...x, loading: false, error: j?.error === 'sem-token' ? 'sem-token' : 'erro' })); return; }
-      const data: MarketData = { updatedAt: j.updatedAt, source: j.source, index: j.index ?? null, assets: (j.assets ?? []).map(normalizeAsset).filter(Boolean) as Asset[] };
+      const data: MarketData = { updatedAt: j.updatedAt, source: j.source, index: j.index ?? null, ifix: j.ifix ?? null, assets: (j.assets ?? []).map(normalizeAsset).filter(Boolean) as Asset[] };
       try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* sem espaço: segue sem cache */ }
       setS({ data, loading: false, error: null, stale: false });
     } catch {

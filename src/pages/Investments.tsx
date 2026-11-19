@@ -27,13 +27,14 @@ function Change({ v, big }: { v: number | null; big?: boolean }) {
 function AssetRow({ a, rank }: { a: Asset; rank?: number }) {
   const { watchlist, toggleWatch } = usePrefs();
   const fav = watchlist.includes(a.ticker);
+  const [logoFailed, setLogoFailed] = useState(false);
   const kind = fiiKindOf(a);
   const color = TYPE_COLOR[a.type];
   return (
     <li className="surface flex min-w-0 items-center gap-3 rounded-[1.3rem] p-3" data-ticker={a.ticker}>
       {rank != null && <span className="w-4 shrink-0 text-center font-display text-sm font-black text-slate-500">{rank}</span>}
       <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[10px] font-black text-white" style={{ background: `color-mix(in srgb, ${color} 30%, #0b0915)`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 45%, transparent)` }}>
-        {a.logo && !a.logo.includes('BRAPI') ? <img src={a.logo} alt="" className="h-full w-full bg-white object-contain p-1" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} /> : a.ticker.slice(0, 4)}
+        {a.logo && !logoFailed ? <img src={a.logo} alt="" className="h-full w-full bg-white object-contain p-1" loading="lazy" onError={() => setLogoFailed(true)} /> : a.ticker.slice(0, 4)}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate font-display font-black text-white">{a.ticker}</p>
@@ -103,7 +104,10 @@ export default function Investments({ tab: tabParam }: { tab?: string }) {
           <div className="relative">
             <p className="label text-white/70">{m.data?.index?.points ? 'Ibovespa' : 'Termômetro do dia'}</p>
             {m.data?.index?.points
-              ? <div className="mt-1 flex flex-wrap items-center gap-3"><p className="font-display text-3xl font-black text-white">{formatNumber(m.data.index.points, 0)} pts</p><Change v={m.data.index.changePct} big /></div>
+              ? <>
+                  <div className="mt-1 flex flex-wrap items-center gap-3"><p className="font-display text-3xl font-black text-white">{formatNumber(m.data.index.points, 0)} pts</p><Change v={m.data.index.changePct} big /></div>
+                  {m.data.ifix?.points ? <p className="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-white/80">IFIX (fundos imobiliários) {formatNumber(m.data.ifix.points, 0)} pts <Change v={m.data.ifix.changePct} /></p> : null}
+                </>
               : <div className="mt-1 flex flex-wrap items-center gap-3"><p className="font-display text-3xl font-black text-white">{br.total ? `${br.up} sobem` : '—'}</p>{br.total > 0 && <Change v={br.avg} big />}</div>}
             {br.total > 0 && (
               <>

@@ -22,9 +22,9 @@ export const CATALOG: Record<string, CatalogItem> = {
   B3SA3: { type: 'acao', segment: 'Bolsa' }, BBSE3: { type: 'acao', segment: 'Seguros' }, WEGE3: { type: 'acao', segment: 'Indústria' },
   ABEV3: { type: 'acao', segment: 'Bebidas' }, MGLU3: { type: 'acao', segment: 'Varejo' }, LREN3: { type: 'acao', segment: 'Varejo' },
   RADL3: { type: 'acao', segment: 'Farmácias' }, SUZB3: { type: 'acao', segment: 'Papel e celulose' }, RENT3: { type: 'acao', segment: 'Aluguel de carros' },
-  ELET3: { type: 'acao', segment: 'Energia' }, EGIE3: { type: 'acao', segment: 'Energia' }, TAEE11: { type: 'acao', segment: 'Energia' },
+  AXIA3: { type: 'acao', segment: 'Energia' }, EGIE3: { type: 'acao', segment: 'Energia' }, TAEE11: { type: 'acao', segment: 'Energia' },
   CMIG4: { type: 'acao', segment: 'Energia' }, SBSP3: { type: 'acao', segment: 'Saneamento' }, VIVT3: { type: 'acao', segment: 'Telecom' },
-  EMBR3: { type: 'acao', segment: 'Fabricante de aviões' }, AZUL4: { type: 'acao', segment: 'Companhia aérea' }, GGBR4: { type: 'acao', segment: 'Siderurgia' }, JBSS3: { type: 'acao', segment: 'Proteína animal' }, BRFS3: { type: 'acao', segment: 'Proteína animal' }, MRFG3: { type: 'acao', segment: 'Proteína animal' },
+  EMBJ3: { type: 'acao', segment: 'Fabricante de aviões' }, AZUL3: { type: 'acao', segment: 'Companhia aérea' }, GGBR4: { type: 'acao', segment: 'Siderurgia' }, MBRF3: { type: 'acao', segment: 'Proteína animal' }, BEEF3: { type: 'acao', segment: 'Proteína animal' },
   // FIIs de tijolo (imóveis de verdade)
   HGLG11: { type: 'fii', kind: 'tijolo', segment: 'Logística' }, BTLG11: { type: 'fii', kind: 'tijolo', segment: 'Logística' },
   LVBI11: { type: 'fii', kind: 'tijolo', segment: 'Logística' }, XPLG11: { type: 'fii', kind: 'tijolo', segment: 'Logística' },
@@ -34,11 +34,10 @@ export const CATALOG: Record<string, CatalogItem> = {
   // FIIs de papel (recebíveis imobiliários, CRIs)
   KNCR11: { type: 'fii', kind: 'papel', segment: 'Recebíveis (CDI)' }, KNIP11: { type: 'fii', kind: 'papel', segment: 'Recebíveis (IPCA)' },
   MXRF11: { type: 'fii', kind: 'papel', segment: 'Recebíveis' }, CPTS11: { type: 'fii', kind: 'papel', segment: 'Recebíveis' },
-  IRDM11: { type: 'fii', kind: 'papel', segment: 'Recebíveis' }, RECR11: { type: 'fii', kind: 'papel', segment: 'Recebíveis' },
+  RECR11: { type: 'fii', kind: 'papel', segment: 'Recebíveis' },
   VGIR11: { type: 'fii', kind: 'papel', segment: 'Recebíveis (CDI)' }, KNSC11: { type: 'fii', kind: 'papel', segment: 'Recebíveis' },
   // Fundos de fundos e híbridos
-  BCFF11: { type: 'fii', kind: 'fof', segment: 'Fundo de fundos' }, KFOF11: { type: 'fii', kind: 'fof', segment: 'Fundo de fundos' },
-  RBRF11: { type: 'fii', kind: 'fof', segment: 'Fundo de fundos' }, KNRI11: { type: 'fii', kind: 'hibrido', segment: 'Lajes + logística' },
+  KFOF11: { type: 'fii', kind: 'fof', segment: 'Fundo de fundos' }, KNRI11: { type: 'fii', kind: 'hibrido', segment: 'Lajes + logística' },
   // ETFs
   BOVA11: { type: 'etf', segment: 'Ibovespa' }, SMAL11: { type: 'etf', segment: 'Small caps' }, IVVB11: { type: 'etf', segment: 'S&P 500 (EUA)' },
   HASH11: { type: 'etf', segment: 'Criptomoedas' }, GOLD11: { type: 'etf', segment: 'Ouro' }, DIVO11: { type: 'etf', segment: 'Dividendos' },
@@ -70,16 +69,28 @@ export function normalizeAsset(raw: any): Asset | null {
   if (!/^[A-Z0-9^.]{4,12}$/.test(ticker)) return null;
   const cat = CATALOG[ticker];
   const rawType = String(raw?.type ?? '').toLowerCase();
-  const type: AssetType = cat?.type ?? (rawType === 'fund' || rawType === 'fii' ? (/11$/.test(ticker) ? 'fii' : 'etf') : rawType === 'bdr' || /3[45]$/.test(ticker) ? 'bdr' : rawType === 'etf' ? 'etf' : 'acao');
-  const sector = raw?.sector ? (SECTOR_PT[raw.sector] ?? raw.sector) : null;
+  const sub = String(raw?.subType ?? raw?.subtype ?? '').toLowerCase();
+  let type: AssetType | null = cat?.type ?? null;
+  if (!type) {
+    if (sub === 'fii' || sub === 'fi-agro' || sub === 'fi-infra') type = 'fii';
+    else if (sub === 'etf') type = 'etf';
+    else if (sub === 'bdr' || rawType === 'bdr') type = 'bdr';
+    else if (sub === 'stock' || sub === 'unit' || rawType === 'stock') type = 'acao';
+    else if (rawType === 'fund' && !sub) return null; // fundo sem classificação (ex.: cotas com preço fora do padrão)
+    else type = rawType === 'fund' || rawType === 'fii' ? (/11$/.test(ticker) ? 'fii' : 'etf') : /3[2-5]$/.test(ticker) ? 'bdr' : 'acao';
+  }
+  const subsector = typeof raw?.subsector === 'string' && !/^(outros|multicategoria)$/i.test(raw.subsector) ? raw.subsector : null;
+  const sector = sub === 'fi-agro' ? 'Fiagro' : sub === 'fi-infra' ? 'Infraestrutura' : subsector ?? (raw?.sector && raw.sector !== 'Miscellaneous' ? (SECTOR_PT[raw.sector] ?? raw.sector) : null);
+  const price = num(raw?.close ?? raw?.regularMarketPrice ?? raw?.price);
+  if (price != null && price <= 0) return null;
   return {
     ticker, type,
-    name: String(raw?.name ?? raw?.shortName ?? raw?.longName ?? ticker).trim(),
-    price: num(raw?.close ?? raw?.regularMarketPrice ?? raw?.price),
+    name: String(raw?.longName && raw?.shortName === ticker ? raw.longName : raw?.name ?? raw?.shortName ?? raw?.longName ?? ticker).trim(),
+    price,
     changePct: num(raw?.change ?? raw?.regularMarketChangePercent ?? raw?.changePercent),
     volume: num(raw?.volume ?? raw?.regularMarketVolume),
     marketCap: num(raw?.market_cap ?? raw?.marketCap),
-    logo: typeof raw?.logo === 'string' ? raw.logo : null,
+    logo: typeof raw?.logo === 'string' ? raw.logo : typeof raw?.logourl === 'string' ? raw.logourl : null,
     sector: cat?.segment ?? sector,
   };
 }
@@ -87,12 +98,20 @@ export function normalizeAsset(raw: any): Asset | null {
 export const segmentOf = (a: Asset) => CATALOG[a.ticker]?.segment ?? a.sector ?? '—';
 export const fiiKindOf = (a: Asset): FiiKind | null => CATALOG[a.ticker]?.kind ?? null;
 
-/** Maiores altas e baixas do dia entre ativos com liquidez (volume mínimo). */
-export function topMovers(assets: Asset[], n = 5, minVolume = 1_000_000) {
-  const liquid = assets.filter((a) => a.changePct != null && a.price != null && (a.volume ?? 0) >= minVolume && a.type !== 'bdr');
+/** Volume financeiro do dia (preço × quantidade negociada). */
+export const moneyVolume = (a: Asset) => (a.price ?? 0) * (a.volume ?? 0);
+
+/**
+ * Maiores altas e baixas do dia entre ativos com liquidez: volume financeiro mínimo, preço ≥ R$ 1
+ * e, para ações, valor de mercado ≥ R$ 1 bi (quando informado). Evita "micos" que sobem 30% com meia dúzia de negócios.
+ */
+export function topMovers(assets: Asset[], n = 5, minMoney = 10_000_000) {
+  const liquid = assets.filter((a) => a.changePct != null && a.price != null && a.price >= 1 && a.type !== 'bdr'
+    && moneyVolume(a) >= (a.type === 'acao' ? minMoney : minMoney / 3)
+    && (a.type !== 'acao' || a.marketCap == null || a.marketCap >= 1_000_000_000));
   const up = [...liquid].filter((a) => a.changePct! > 0).sort((a, b) => b.changePct! - a.changePct!).slice(0, n);
   const down = [...liquid].filter((a) => a.changePct! < 0).sort((a, b) => a.changePct! - b.changePct!).slice(0, n);
-  const traded = [...liquid].sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0)).slice(0, n);
+  const traded = [...liquid].sort((a, b) => moneyVolume(b) - moneyVolume(a)).slice(0, n);
   return { up, down, traded };
 }
 
@@ -117,7 +136,7 @@ export function sortForList(assets: Asset[]) {
   return [...assets].sort((a, b) => {
     const ia = order.indexOf(a.ticker); const ib = order.indexOf(b.ticker);
     if (ia >= 0 || ib >= 0) return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
-    return (b.volume ?? 0) - (a.volume ?? 0);
+    return moneyVolume(b) - moneyVolume(a);
   });
 }
 
