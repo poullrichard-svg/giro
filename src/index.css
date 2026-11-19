@@ -166,3 +166,8 @@ select option { background: #13111f; }
   100% { transform: translate3d(var(--drift), 110vh, 0) rotate(calc(var(--rot) + 720deg)); opacity: .9; }
 }
 .confetti { animation: confetti-fall 3s cubic-bezier(.25,.6,.4,1) both; }
+
+/* iPhone (Safari) dá zoom na tela ao tocar num campo com letra menor que 16px — e a janela fica cortada. */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea { font-size: max(16px, 1em) !important; }
+}

@@ -11,6 +11,7 @@ import { budgetStatus, monthEndProjection, upcomingDue } from '../lib/planning';
 import { accountBalance, isInternal, txMonth } from '../lib/cards';
 import { appProfit, timeSlotStats, weekdayStats } from '../lib/driverInsights';
 import { goalPlan } from '../lib/goals';
+import { debtStatus, debtsSummary } from '../lib/debts';
 
 export type Data = { [K in CollectionKey]: Collections[K][] };
 const r = (n: number) => Math.round(n);
@@ -50,8 +51,9 @@ export function financeSummary(data: Data, today: string, opts: { shareDescripti
     const t = monthTotals(data.transactions, data.fixed, m);
     return { month: m, income: r(t.income), expense: r(t.expense), balance: r(t.balance) };
   });
-  const proj = monthEndProjection({ accounts: data.accounts, tx: data.transactions, fixed: data.fixed, payments: data.fixedPayments, cards: data.cards }, today);
-  const due = upcomingDue({ fixed: data.fixed, payments: data.fixedPayments, cards: data.cards, tx: data.transactions, vehicles: data.vehicles }, today, 7);
+  const proj = monthEndProjection({ accounts: data.accounts, tx: data.transactions, fixed: data.fixed, payments: data.fixedPayments, cards: data.cards, debts: data.debts }, today);
+  const due = upcomingDue({ fixed: data.fixed, payments: data.fixedPayments, cards: data.cards, tx: data.transactions, vehicles: data.vehicles, debts: data.debts }, today, 7);
+  const ds = debtsSummary(data.debts, today);
   const recurring = recurringExpenses(data, today);
   return {
     today,
@@ -64,6 +66,8 @@ export function financeSummary(data: Data, today: string, opts: { shareDescripti
     accounts: data.accounts.filter((a) => !a.archived).map((a) => ({ name: a.name, balance: r(accountBalance(a, data.transactions, today)) })),
     fixedBills: data.fixed.map((f) => ({ category: f.category, type: f.type, amount: r(f.amount), ...(opts.shareDescriptions ? { name: f.description } : {}) })),
     goals: data.goals.map((g) => { const p = goalPlan(g, data.goalContributions, today); return { name: g.description, saved: r(g.currentAmount), target: r(g.targetAmount), deadline: g.deadline ?? null, monthlyNeeded: p.monthlyNeeded != null ? r(p.monthlyNeeded) : null, status: p.status }; }),
+    debts: data.debts.length ? { remaining: r(ds.remaining), paid: r(ds.paid), overdue: r(ds.overdueAmount), dueNext30Days: r(ds.dueIn30), freeDate: ds.freeDate,
+      list: data.debts.map((d) => { const st = debtStatus(d, today); return { kind: d.kind, ...(opts.shareDescriptions ? { creditor: d.creditor } : {}), remaining: r(st.remaining), monthlyRate: d.monthlyRate ?? null, installmentsLeft: st.count - st.paidCount, nextDue: st.next?.dueDate ?? null }; }) } : null,
     unusualSpending: unusualSpending(data, today),
     recurringExpenses: recurring.map((x) => ({ ...(opts.shareDescriptions ? { name: x.name } : {}), category: x.category, monthly: x.monthly, months: x.months, lastSeen: x.last })),
   };

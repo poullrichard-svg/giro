@@ -222,3 +222,29 @@ export interface Simulation {
   values: Record<string, unknown>;
   summary: string;
 }
+
+/** Dívidas: acordos, faculdade, empréstimos, cartão… Cada uma com suas parcelas. */
+export type DebtKind = 'acordo' | 'faculdade' | 'cartao' | 'emprestimo' | 'financiamento' | 'contas' | 'pessoal' | 'outro';
+export interface DebtInstallment {
+  id: string;
+  amount: number;
+  dueDate: string; // YYYY-MM-DD
+  /** Data em que foi paga (null = em aberto). */
+  paidAt?: string | null;
+  /** Lançamento criado ao marcar como paga. */
+  transactionId?: string | null;
+}
+export interface Debt {
+  id: string;
+  creditor: string;
+  description?: string | null;
+  kind: DebtKind;
+  /** Categoria dos lançamentos ao pagar. */
+  category: string;
+  /** Juros ao mês (%), se souber. Usado para decidir qual quitar primeiro. */
+  monthlyRate?: number | null;
+  /** Quanto era a dívida antes de negociar (para mostrar o desconto conseguido). */
+  originalAmount?: number | null;
+  installments: DebtInstallment[];
+  notes?: string | null;
+}

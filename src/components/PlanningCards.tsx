@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BellRing, CalendarClock, Car, Check, CheckCircle2, ChevronRight, CreditCard, Gauge, PiggyBank, Repeat, TrendingDown, TrendingUp } from 'lucide-react';
+import { BellRing, CalendarClock, Car, Check, CheckCircle2, ChevronRight, CreditCard, Gauge, HandCoins, PiggyBank, Repeat, TrendingDown, TrendingUp } from 'lucide-react';
 import { useData } from '../data/DataProvider';
 import { useToast } from '../data/toast';
-import { usePayFixed } from '../data/actions';
+import { usePayDebt, usePayFixed } from '../data/actions';
 import { EXPENSE_CATEGORIES, colorFor } from '../lib/categories';
 import { formatBRL, formatDate } from '../lib/format';
 import { averageSpent, budgetStatus, monthEndProjection, spentIn, upcomingDue, type BudgetStatus, type DueItem } from '../lib/planning';
 import { enableReminders, remindersEnabled, remindersSupported, sendDueReminders } from '../lib/reminders';
 import { go } from '../router';
+import { Celebration } from './Celebration';
 import { Button, Card, Empty, Field, IconButton, Modal, MoneyInput, Money, Progress, Row, cx } from './ui';
 
 const LEVEL_TONE = { ok: 'good', atencao: 'warn', estourou: 'bad' } as const;
@@ -93,16 +94,18 @@ function BudgetForm({ open, onClose, month }: { open: boolean; onClose: () => vo
 }
 
 // ---------------------------------------------------------------------------
-const DUE_ICON = { fixa: Repeat, fatura: CreditCard, veiculo: Car };
+const DUE_ICON = { fixa: Repeat, fatura: CreditCard, veiculo: Car, divida: HandCoins };
 const dueText = (d: number) => (d < 0 ? `Atrasada ${-d} ${d === -1 ? 'dia' : 'dias'}` : d === 0 ? 'Vence hoje' : d === 1 ? 'Vence amanhã' : `Vence em ${d} dias`);
 
 export function UpcomingCard({ today }: { today: string }) {
   const { data } = useData();
   const payFixed = usePayFixed();
+  const { pay: payDebt } = usePayDebt();
   const toast = useToast();
+  const [party, setParty] = useState<string | null>(null);
   const [notif, setNotif] = useState(remindersEnabled());
-  const items = useMemo(() => upcomingDue({ fixed: data.fixed, payments: data.fixedPayments, cards: data.cards, tx: data.transactions, vehicles: data.vehicles }, today, 7),
-    [data.fixed, data.fixedPayments, data.cards, data.transactions, data.vehicles, today]);
+  const items = useMemo(() => upcomingDue({ fixed: data.fixed, payments: data.fixedPayments, cards: data.cards, tx: data.transactions, vehicles: data.vehicles, debts: data.debts }, today, 7),
+    [data.fixed, data.fixedPayments, data.cards, data.transactions, data.vehicles, data.debts, today]);
   const total = items.reduce((s, i) => s + i.amount, 0);
 
   // Ao abrir o app, avisa pelo sistema o que vence até amanhã (uma vez por dia).
@@ -112,6 +115,12 @@ export function UpcomingCard({ today }: { today: string }) {
     if (i.kind === 'fixa' && i.ref.fixedId && i.ref.month) {
       const bill = data.fixed.find((f) => f.id === i.ref.fixedId);
       if (bill && await payFixed(bill, i.ref.month)) toast(`${i.title} marcada como paga`);
+    } else if (i.kind === 'divida' && i.ref.debtId) {
+      const d = data.debts.find((x) => x.id === i.ref.debtId); const inst = d?.installments.find((x) => x.id === i.ref.installmentId);
+      if (d && inst && await payDebt(d, inst)) {
+        if (d.installments.every((x) => x.paidAt || x.id === inst.id)) setParty(d.creditor);
+        else toast(`${i.title} paga — menos uma! 💪`);
+      }
     } else if (i.kind === 'fatura' && i.ref.cardId) go('contas', i.ref.cardId);
     else if (i.ref.vehicleId) go('veiculos', i.ref.vehicleId);
   };
@@ -137,7 +146,7 @@ export function UpcomingCard({ today }: { today: string }) {
                 <Row key={i.id} tone={i.daysLeft < 0 ? 'bad' : i.daysLeft <= 1 ? 'warn' : 'info'} icon={<Icon size={17} />}
                   title={i.title} subtitle={<><span className={i.daysLeft < 0 ? 'text-rose-400' : i.daysLeft <= 1 ? 'text-amber-400' : undefined}>{dueText(i.daysLeft)} · {formatDate(i.date).slice(0, 5)}</span><span className="text-rose-400 sm:hidden"> · {formatBRL(i.amount)}</span></>}
                   amount={formatBRL(i.amount)} amountTone="bad" amountClassName="hidden sm:inline"
-                  actions={i.kind === 'fixa'
+                  actions={i.kind === 'fixa' || i.kind === 'divida'
                     ? <IconButton label={`Paguei — ${i.title}`} onClick={() => act(i)} className="bg-emerald-500/15 text-emerald-300 ring-emerald-500/25 hover:bg-emerald-500/25 hover:text-emerald-200"><Check size={17} strokeWidth={3} /></IconButton>
                     : <IconButton label={`Abrir — ${i.title}`} onClick={() => act(i)}><ChevronRight size={18} /></IconButton>} />
               );
@@ -145,6 +154,7 @@ export function UpcomingCard({ today }: { today: string }) {
           </ul>
         </>
       )}
+      {party && <Celebration label="Dívida quitada" title={party} text="Menos uma! Cada dívida quitada é dinheiro de volta no seu bolso." onClose={() => setParty(null)} />}
     </Card>
   );
 }
@@ -152,12 +162,13 @@ export function UpcomingCard({ today }: { today: string }) {
 // ---------------------------------------------------------------------------
 export function ProjectionCard({ today }: { today: string }) {
   const { data } = useData();
-  const p = useMemo(() => monthEndProjection({ accounts: data.accounts, tx: data.transactions, fixed: data.fixed, payments: data.fixedPayments, cards: data.cards }, today),
-    [data.accounts, data.transactions, data.fixed, data.fixedPayments, data.cards, today]);
+  const p = useMemo(() => monthEndProjection({ accounts: data.accounts, tx: data.transactions, fixed: data.fixed, payments: data.fixedPayments, cards: data.cards, debts: data.debts }, today),
+    [data.accounts, data.transactions, data.fixed, data.fixedPayments, data.cards, data.debts, today]);
   const lines = [
     { label: 'Contas fixas a pagar', v: -p.fixedToPay, icon: TrendingDown },
     { label: 'Receitas fixas a receber', v: p.fixedToReceive, icon: TrendingUp },
     { label: 'Faturas que vencem no mês', v: -p.invoicesToPay, icon: CreditCard },
+    { label: 'Parcelas de dívidas no mês', v: -p.debtsToPay, icon: HandCoins },
   ].filter((l) => l.v !== 0);
   const down = p.projected < p.balanceToday;
 

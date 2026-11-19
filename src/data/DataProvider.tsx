@@ -14,7 +14,7 @@ const byCreatedAsc = (a: any, b: any) => (a.createdAt ?? '').localeCompare(b.cre
 const SORT: Record<CollectionKey, (a: any, b: any) => number> = {
   transactions: byDateDesc, sessions: byDateDesc, vehicleExpenses: byDateDesc,
   goals: byCreatedDesc, shopping: byCreatedDesc, fixedPayments: byCreatedDesc,
-  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc, accounts: byCreatedAsc, cards: byCreatedAsc, budgets: byCreatedAsc, attachments: byCreatedAsc, simulations: byCreatedDesc, goalContributions: byDateDesc,
+  fixed: byCreatedAsc, vehicles: byCreatedAsc, settings: byCreatedAsc, accounts: byCreatedAsc, cards: byCreatedAsc, budgets: byCreatedAsc, attachments: byCreatedAsc, simulations: byCreatedDesc, goalContributions: byDateDesc, debts: byCreatedAsc,
 };
 
 interface DataApi {
@@ -119,6 +119,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const gone = new Set(ops.del!.transactions ?? [id]);
       const att = t?.attachmentId;
       if (att && !(data.transactions as any[]).some((x) => x.attachmentId === att && !gone.has(x.id))) ops.del!.attachments = [att];
+      // Era o pagamento de uma parcela de dívida: a parcela volta a ficar em aberto.
+      const debtHit = (data.debts as any[]).filter((d) => d.installments.some((i: any) => gone.has(i.transactionId)));
+      if (debtHit.length) ops.put!.debts = debtHit.map((d) => ({ ...d, updatedAt: new Date().toISOString(), installments: d.installments.map((i: any) => (gone.has(i.transactionId) ? { ...i, paidAt: null, transactionId: null } : i)) }));
     }
     if (k === 'accounts' || k === 'cards') return false; // contas e cartões são arquivados, não apagados
     // Desmarcar conta fixa paga: desfaz também a saída/entrada na conta.

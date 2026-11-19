@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { HandCoins, ChevronRight } from 'lucide-react';
+import { debtsSummary, openInstallmentsUntil } from '../lib/debts';
 import { useCloud } from '../cloud/CloudProvider';
 import { firstName } from '../cloud/profile';
 import { AlertTriangle, ArrowDown, ArrowDownCircle, ArrowUp, ArrowUpCircle, BarChart3, Bell, Car, CalendarClock, HardDriveDownload, PieChart, Sparkles, Wallet } from 'lucide-react';
@@ -38,7 +40,7 @@ export default function Dashboard() {
   const recent = data.transactions.slice(0, 6);
   const isCurrent = month === currentMonth();
 
-  const isEmpty = data.transactions.length === 0 && data.fixed.length === 0 && data.sessions.length === 0;
+  const isEmpty = data.transactions.length === 0 && data.fixed.length === 0 && data.sessions.length === 0 && data.debts.length === 0;
   const [backupTick, setBackupTick] = useState(0);
   const backupDays = useMemo(() => {
     void backupTick;
@@ -116,6 +118,7 @@ export default function Dashboard() {
         <Stat label="Lucro motorista" money={driver.netProfit} tone={driver.netProfit >= 0 ? 'info' : 'bad'} icon={<Car />} sub={`${formatBRL(driver.gross)} bruto · ${driver.daysWorked} ${driver.daysWorked === 1 ? 'dia' : 'dias'}`} />
       </div>
 
+      {isCurrent && <DebtStrip />}
       {isCurrent && (
         <div className="grid gap-4 lg:grid-cols-2">
           <ProjectionCard today={localISODate()} />
@@ -179,5 +182,25 @@ export default function Dashboard() {
       </Card>
       </>}
     </div>
+  );
+}
+
+/** Faixa das dívidas no Início: quanto falta e a próxima parcela. */
+function DebtStrip() {
+  const { data } = useData();
+  const today = localISODate();
+  const sum = debtsSummary(data.debts, today);
+  if (!data.debts.length || sum.remaining <= 0) return null;
+  const next = openInstallmentsUntil(data.debts, '9999-12-31')[0];
+  return (
+    <a href="#/dividas" className="surface surface-hover press mb-4 flex items-center gap-4 rounded-[1.6rem] p-4 ring-1 ring-orange-500/20">
+      <span className="solid flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={{ '--tone': sum.overdueAmount > 0 ? '#e11d48' : '#f97316' } as React.CSSProperties}><HandCoins size={20} /></span>
+      <span className="min-w-0 flex-1">
+        <span className="label block text-orange-300">Dívidas · {Math.round(sum.pct)}% quitado</span>
+        <span className="block truncate font-display text-lg font-black text-white">Falta {formatBRL(sum.remaining)}</span>
+        {next && <span className="block truncate text-xs text-slate-400">Próxima: {next.debt.creditor} · {formatBRL(next.installment.amount)} em {formatDate(next.installment.dueDate).slice(0, 5)}</span>}
+      </span>
+      <ChevronRight size={18} className="shrink-0 text-slate-500" />
+    </a>
   );
 }

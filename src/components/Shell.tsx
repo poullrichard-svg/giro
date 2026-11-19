@@ -1,6 +1,6 @@
 import { createContext, lazy, Suspense, useContext, useState, type ReactNode } from 'react';
 import {
-  Calculator, Car, CarFront, Flag, Landmark, LayoutDashboard, Menu, Plus, BarChart3, Repeat, ShoppingCart, Sparkles, Wallet,
+  Calculator, Car, CarFront, Flag, Landmark, LayoutDashboard, Menu, Plus, BarChart3, HandCoins, Repeat, ShoppingCart, Sparkles, Wallet,
 } from 'lucide-react';
 import { go, useRoute, type Route } from '../router';
 import { useData } from '../data/DataProvider';
@@ -14,6 +14,7 @@ const Dashboard = lazy(() => import('../pages/Dashboard'));
 const Transactions = lazy(() => import('../pages/Transactions'));
 const Accounts = lazy(() => import('../pages/Accounts'));
 const FixedBills = lazy(() => import('../pages/FixedBills'));
+const Debts = lazy(() => import('../pages/Debts'));
 const Driver = lazy(() => import('../pages/Driver'));
 const Vehicles = lazy(() => import('../pages/Vehicles'));
 const Calculators = lazy(() => import('../pages/calculators/Calculators'));
@@ -28,6 +29,7 @@ const NAV: Array<{ id: Route; label: string; icon: typeof Wallet }> = [
   { id: 'lancamentos', label: 'Lançamentos', icon: Wallet },
   { id: 'contas', label: 'Contas e cartões', icon: Landmark },
   { id: 'fixas', label: 'Contas fixas', icon: Repeat },
+  { id: 'dividas', label: 'Dívidas', icon: HandCoins },
   { id: 'motorista', label: 'Motorista', icon: Car },
   { id: 'veiculos', label: 'Veículos', icon: CarFront },
   { id: 'calculadoras', label: 'Calculadoras', icon: Calculator },
@@ -50,7 +52,7 @@ export default function Shell() {
   const openTx = (p?: TxPreset) => { setPreset(p); setTxOpen(true); };
 
   const page: Record<Route, ReactNode> = {
-    inicio: <Dashboard />, lancamentos: <Transactions />, contas: <Accounts id={param} />, fixas: <FixedBills />, motorista: <Driver />,
+    inicio: <Dashboard />, lancamentos: <Transactions />, contas: <Accounts id={param} />, fixas: <FixedBills />, dividas: <Debts id={param} />, motorista: <Driver />,
     veiculos: <Vehicles id={param} />, calculadoras: <Calculators tab={param} />, metas: <Goals id={param} />, compras: <Shopping />, assistente: <Assistant />, admin: <Admin />, mais: <More section={param} />,
   };
 

@@ -6,7 +6,7 @@ import { formatBRL } from '../lib/format';
 export const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(' ');
 
 /** Junta classes base + extras; se o extra define largura/altura/tamanho de texto, a base cede. */
-const GROUPS = [/^w-/, /^min-h-/, /^h-/, /^text-(xs|sm|base|lg|xl|\d)/, /^py-/, /^rounded/, /^(hidden|block|inline-block|flex|inline-flex|grid)$/];
+const GROUPS = [/^w-/, /^min-h-/, /^h-/, /^(md:)?text-(xs|sm|base|lg|xl|\d)/, /^py-/, /^rounded/, /^(hidden|block|inline-block|flex|inline-flex|grid)$/];
 export const merge = (base: string, extra?: string) => {
   if (!extra) return base;
   const ex = extra.split(/\s+/);
@@ -135,7 +135,7 @@ export function Field({ label, children, hint, className, group, error }: { labe
     : <label className={cls}>{inner}</label>;
 }
 
-const inputCls = 'w-full min-h-12 rounded-2xl border border-white/[.07] bg-[#08070f] px-4 text-sm font-semibold text-white outline-none transition duration-300 placeholder:font-medium placeholder:text-slate-600 hover:border-white/15 focus:border-brand-400/70 focus:ring-4 focus:ring-brand-500/15';
+const inputCls = 'w-full min-h-12 rounded-2xl border border-white/[.07] bg-[#08070f] px-4 text-base md:text-sm font-semibold text-white outline-none transition duration-300 placeholder:font-medium placeholder:text-slate-600 hover:border-white/15 focus:border-brand-400/70 focus:ring-4 focus:ring-brand-500/15';
 
 export function Input(p: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...p} className={merge(inputCls, p.className)} />;

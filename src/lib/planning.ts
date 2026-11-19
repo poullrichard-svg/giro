@@ -1,7 +1,7 @@
 /**
  * Orçamento, próximos vencimentos e projeção do fim do mês — cálculos puros (planning.test.ts).
  */
-import type { Account, Budget, Card, FixedBill, FixedPayment, Transaction, Vehicle } from '../types';
+import type { Account, Budget, Card, FixedBill, FixedPayment, Transaction, Vehicle, Debt } from '../types';
 import { accountBalance, invoiceMonthFor, invoiceSummary, isInternal, txMonth } from './cards';
 import { addDays, addMonths, daysUntil, round2 } from './format';
 
@@ -46,13 +46,13 @@ export function averageSpent(category: string, tx: Transaction[], fixed: FixedBi
 // ---------------------------------------------------------------------------
 export interface DueItem {
   id: string;
-  kind: 'fixa' | 'fatura' | 'veiculo';
+  kind: 'fixa' | 'fatura' | 'veiculo' | 'divida';
   title: string;
   date: string;
   daysLeft: number;
   amount: number;
   /** Dados para a ação (marcar paga / abrir cartão / abrir veículo). */
-  ref: { fixedId?: string; month?: string; cardId?: string; vehicleId?: string };
+  ref: { fixedId?: string; month?: string; cardId?: string; vehicleId?: string; debtId?: string; installmentId?: string };
 }
 
 const clampDate = (month: string, day: number) => {
@@ -65,7 +65,7 @@ const clampDate = (month: string, day: number) => {
  * Contas fixas: só despesas, sem pagamento marcado no mês. Faturas: com valor em aberto.
  */
 export function upcomingDue(
-  { fixed, payments, cards, tx, vehicles }: { fixed: FixedBill[]; payments: FixedPayment[]; cards: Card[]; tx: Transaction[]; vehicles: Vehicle[] },
+  { fixed, payments, cards, tx, vehicles, debts = [] }: { fixed: FixedBill[]; payments: FixedPayment[]; cards: Card[]; tx: Transaction[]; vehicles: Vehicle[]; debts?: Debt[] },
   today: string, days = 7,
 ): DueItem[] {
   const out: DueItem[] = [];
@@ -96,6 +96,14 @@ export function upcomingDue(
       out.push({ id: `veiculo-${v.id}-${label}`, kind: 'veiculo', title: `${label} · ${v.name}`, date, daysLeft: daysUntil(date, today), amount, ref: { vehicleId: v.id } });
     }
   }
+  // Parcelas de dívidas: as que vencem na janela e todas as atrasadas.
+  for (const d of debts) {
+    const n = d.installments.length;
+    [...d.installments].sort((a, b) => a.dueDate.localeCompare(b.dueDate)).forEach((i, k) => {
+      if (i.paidAt || i.dueDate > limit) return;
+      out.push({ id: `divida-${d.id}-${i.id}`, kind: 'divida', title: n > 1 ? `${d.creditor} (${k + 1}/${n})` : d.creditor, date: i.dueDate, daysLeft: daysUntil(i.dueDate, today), amount: i.amount, ref: { debtId: d.id, installmentId: i.id } });
+    });
+  }
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -108,6 +116,7 @@ export interface Projection {
   fixedToPay: number;
   fixedToReceive: number;
   invoicesToPay: number;
+  debtsToPay: number;
   projected: number;
 }
 
@@ -117,7 +126,7 @@ export interface Projection {
  * (Lançamentos futuros já registrados também entram.)
  */
 export function monthEndProjection(
-  { accounts, tx, fixed, payments, cards }: { accounts: Account[]; tx: Transaction[]; fixed: FixedBill[]; payments: FixedPayment[]; cards: Card[] },
+  { accounts, tx, fixed, payments, cards, debts = [] }: { accounts: Account[]; tx: Transaction[]; fixed: FixedBill[]; payments: FixedPayment[]; cards: Card[]; debts?: Debt[] },
   today: string,
 ): Projection {
   const month = today.slice(0, 7);
@@ -138,7 +147,8 @@ export function monthEndProjection(
     }
   }
   invoicesToPay = round2(invoicesToPay);
-  return { endDate, balanceToday, fixedToPay, fixedToReceive, invoicesToPay, projected: round2(balanceToday + scheduled - fixedToPay + fixedToReceive - invoicesToPay) };
+  const debtsToPay = round2(debts.flatMap((d) => d.installments).filter((i) => !i.paidAt && i.dueDate <= endDate).reduce((s, i) => s + i.amount, 0));
+  return { endDate, balanceToday, fixedToPay, fixedToReceive, invoicesToPay, debtsToPay, projected: round2(balanceToday + scheduled - fixedToPay + fixedToReceive - invoicesToPay - debtsToPay) };
 }
 
 /** Mensagem de aviso se um novo gasto cruzar 80% ou 100% do limite da categoria (ou null). */

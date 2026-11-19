@@ -23,7 +23,7 @@ Responda em português do Brasil, em tom próximo e direto, sem jargão. Seja br
 
 Baseie-se somente nos dados do resumo abaixo. Se faltar informação para responder, diga o que falta e como registrar no app. Não invente números. Não recomende investimentos específicos (ações, fundos ou produtos de bancos); pode explicar conceitos gerais.
 
-Sobre os dados: valores mensais incluem contas fixas; "projectedEndOfMonth" é o saldo previsto no fim do mês; "recurringExpenses" são gastos que se repetiram em 3+ meses com valor parecido (possíveis assinaturas); "unusualSpending" são categorias bem acima da média dos 3 meses anteriores; "driver" vem do painel do motorista (pode ser null se a pessoa não registra turnos).`;
+Sobre os dados: valores mensais incluem contas fixas; "projectedEndOfMonth" é o saldo previsto no fim do mês; "recurringExpenses" são gastos que se repetiram em 3+ meses com valor parecido (possíveis assinaturas); "unusualSpending" são categorias bem acima da média dos 3 meses anteriores; "debts" são as dívidas cadastradas (saldo, juros ao mês se informado, parcelas restantes); ao falar de dívidas, incentive a quitação com passos práticos e realistas, sem julgamento; "driver" vem do painel do motorista (pode ser null se a pessoa não registra turnos).`;
 
 /** Prompt já preparado para o lançamento por voz/foto (ainda sem tela). */
 export const ENTRY_PROMPT = `Extraia um lançamento financeiro do texto ou da imagem. Responda só com JSON no formato

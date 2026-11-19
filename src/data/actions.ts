@@ -1,6 +1,6 @@
 /** Ações que mexem em mais de uma coleção ao mesmo tempo. */
 import { useCallback } from 'react';
-import type { FixedBill } from '../types';
+import type { Debt, DebtInstallment, FixedBill } from '../types';
 import { useData } from './DataProvider';
 import { localISODate, monthLabel } from '../lib/format';
 
@@ -25,3 +25,30 @@ export function usePayFixed() {
   }, [data.accounts, insert]);
 }
 
+
+/**
+ * Paga uma parcela de dívida: cria a saída na conta padrão e marca a parcela como paga.
+ * É um gasto de verdade (não interno): entra nos totais do mês.
+ */
+export function usePayDebt() {
+  const { data, insert, update, remove } = useData();
+  const pay = useCallback(async (debt: Debt, inst: DebtInstallment, accountId?: string | null) => {
+    const account = accountId ?? data.accounts.find((a) => !a.archived)?.id ?? null;
+    const sorted = [...debt.installments].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const k = sorted.findIndex((i) => i.id === inst.id) + 1;
+    const n = sorted.length;
+    const today = localISODate();
+    const tx = await insert('transactions', {
+      type: 'expense', amount: inst.amount, category: debt.category, paymentMethod: 'Pix', date: today, accountId: account,
+      description: n > 1 ? `${debt.creditor} (${k}/${n})` : debt.creditor,
+    });
+    if (!tx) return false;
+    return update('debts', debt.id, { installments: debt.installments.map((i) => (i.id === inst.id ? { ...i, paidAt: today, transactionId: tx[0].id } : i)) });
+  }, [data.accounts, insert, update]);
+  /** Desfaz o pagamento: apaga o lançamento (o banco desmarca a parcela junto). */
+  const unpay = useCallback(async (debt: Debt, inst: DebtInstallment) => {
+    if (inst.transactionId && data.transactions.some((t) => t.id === inst.transactionId)) return remove('transactions', inst.transactionId);
+    return update('debts', debt.id, { installments: debt.installments.map((i) => (i.id === inst.id ? { ...i, paidAt: null, transactionId: null } : i)) });
+  }, [data.transactions, remove, update]);
+  return { pay, unpay };
+}
